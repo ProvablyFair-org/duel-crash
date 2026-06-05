@@ -1,0 +1,18 @@
+{
+  "name": "duel-crash-audit",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "mocha && npm run simulate && npm run verify",
+    "timing": "node src/verify-drand-timing.js",
+    "verify": "ts-node tests/verify.ts",
+    "simulate": "ts-node src/simulate.ts"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^20.0.0",
+    "mocha": "^10.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

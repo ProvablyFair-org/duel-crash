@@ -1,0 +1,135 @@
+{
+  "verdict": "PROVABLY FAIR — Full Pass",
+  "scored": [
+    {
+      "step": 1,
+      "name": "Seed Hash Integrity",
+      "status": "PASS",
+      "detail": "1100/1100 hashes verified — SHA-256(serverSeed_bytes) === serverSeedHash"
+    },
+    {
+      "step": 2,
+      "name": "drand Commitment Timing (Pre-Commitment)",
+      "status": "PASS",
+      "detail": "1100/1100 rounds — bet placed before drand published (min margin: 0.404s, mean: 12.196s, max: 13.779s; via authoritative transactions-API timestamp + drand chain formula)"
+    },
+    {
+      "step": 3,
+      "name": "drand Round Monotonicity",
+      "status": "PASS",
+      "detail": "1100 rounds — drand round IDs strictly increasing (monotonic — no replays or reordering)"
+    },
+    {
+      "step": 4,
+      "name": "Server Seed Uniqueness",
+      "status": "PASS",
+      "detail": "1100 unique seeds, 1100 unique hashes out of 1100 rounds"
+    },
+    {
+      "step": 5,
+      "name": "Outcome Recomputation",
+      "status": "PASS",
+      "detail": "1100/1100 crash points recomputed — 100% parity"
+    },
+    {
+      "step": 6,
+      "name": "Bet-Size Invariance",
+      "status": "PASS",
+      "detail": "100/100 Phase C ($10) rounds recompute identically — crash point is independent of bet amount"
+    },
+    {
+      "step": 7,
+      "name": "Captured Payout Consistency (pre-rakeback display values)",
+      "status": "PASS",
+      "detail": "1100/1100 payouts verified — 1100/1100 isWin flags correct"
+    },
+    {
+      "step": 8,
+      "name": "Distribution Edge Audit (pre-rakeback)",
+      "status": "PASS",
+      "detail": "Instant crash P(1.00) = 1.0891% — RTP@2x = 99.9000%, RTP@10x = 99.9000%, RTP@100x = 99.9000% — distribution edge 0.1% confirmed (pre-rakeback; net player RTP within Zero Edge cap = 100.0%)"
+    },
+    {
+      "step": 9,
+      "name": "Phase Coverage",
+      "status": "PASS",
+      "detail": "Phase A: 800/800, Phase B: 200/200, Phase C: 100/100 — total 1100"
+    },
+    {
+      "step": 10,
+      "name": "Dataset Hash",
+      "status": "PASS",
+      "detail": "SHA-256 pre-flight check passed (verified before loading)"
+    },
+    {
+      "step": 11,
+      "name": "drand Chain Formula",
+      "status": "PASS",
+      "detail": "1100/1100 drandPublishedAt values match quicknet formula (genesis + (round-1) × 3s)"
+    },
+    {
+      "step": 12,
+      "name": "Anti-Circularity (distribution edge, pre-rakeback)",
+      "status": "PASS",
+      "detail": "Distribution RTP independently computed from uint32 threshold formula for 11 targets — all ≤ 99.9% (pre-rakeback). Samples: 1.01x: 99.900000%, 1.1x: 99.900000%, 1.5x: 99.900000%, 2x: 99.900000%"
+    },
+    {
+      "step": 13,
+      "name": "Simulation Pass 1",
+      "status": "PASS",
+      "detail": "5,000,000 rounds (10 streams × 500,000) — Fisher's combined: p=0.5382 (0/10 streams below α=0.01) | lag1Z=-0.029, runsP=0.0436 | @1.5×=99.8863%, @2×=99.8643%, @5×=99.8948%, @10×=99.9334%, @50×=99.7810%"
+    },
+    {
+      "step": 14,
+      "name": "Simulation Pass 2 (Casino Seeds)",
+      "status": "PASS",
+      "detail": "1100 casino seeds × 1000 random drand values — 14 chi-squared failures (expected ≤21 under H₀) | meanRTP=99.9638%"
+    },
+    {
+      "step": 15,
+      "name": "drand API Signature Verification",
+      "status": "PASS",
+      "detail": "1100/1100 drand signatures matched byte-for-byte against api.drand.sh (chain: quicknet) — 0 failures"
+    }
+  ],
+  "informational": [
+    {
+      "label": "Instant crash rate",
+      "detail": "8/1100 (0.73%) — expected ~12.0 (1.09%)"
+    },
+    {
+      "label": "Live RTP @ 1.1x (n=51)",
+      "detail": "94.81% — pre-rakeback display values (see MANIFEST §Money Model); small-n variance — informational only (simulation is authoritative)"
+    },
+    {
+      "label": "Live RTP @ 1.5x (n=800)",
+      "detail": "101.71% — pre-rakeback display values (see MANIFEST §Money Model); small-n variance — informational only (simulation is authoritative)"
+    },
+    {
+      "label": "Live RTP @ 2x (n=149)",
+      "detail": "97.90% — pre-rakeback display values (see MANIFEST §Money Model); small-n variance — informational only (simulation is authoritative)"
+    },
+    {
+      "label": "Live RTP @ 5x (n=50)",
+      "detail": "69.93% — pre-rakeback display values (see MANIFEST §Money Model); small-n variance — informational only (simulation is authoritative)"
+    },
+    {
+      "label": "Live RTP @ 10x (n=50)",
+      "detail": "79.92% — pre-rakeback display values (see MANIFEST §Money Model); small-n variance — informational only (simulation is authoritative)"
+    },
+    {
+      "label": "Overall win rate",
+      "detail": "671/1100 (61.00%)"
+    },
+    {
+      "label": "Crash point range",
+      "detail": "min=1, median=1.96, max=13664.99"
+    }
+  ],
+  "summary": {
+    "passed": 15,
+    "flags": 0,
+    "hardFail": 0,
+    "total": 15
+  }
+}

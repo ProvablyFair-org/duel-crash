@@ -1,0 +1,7 @@
+node_modules/
+dist/
+outputs/*.json
+!outputs/.gitkeep
+!outputs/rtp-convergence.html
+!outputs/drand-api-verification.json
+.DS_Store
