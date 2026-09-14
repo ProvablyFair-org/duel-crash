@@ -90,6 +90,12 @@
       "name": "drand API Signature Verification",
       "status": "PASS",
       "detail": "1100/1100 drand signatures matched byte-for-byte against api.drand.sh (chain: quicknet) — 0 failures"
+    },
+    {
+      "step": 16,
+      "name": "Artifact Integrity (pinned artifacts of record)",
+      "status": "PASS",
+      "detail": "3 artifact(s) checked against src/artifact-pins.ts; drand-api-verification.json matches its pin; rtp-convergence.html matches its pin; simulation-results.json matches its pin"
     }
   ],
   "informational": [
@@ -127,9 +133,9 @@
     }
   ],
   "summary": {
-    "passed": 15,
+    "passed": 16,
     "flags": 0,
     "hardFail": 0,
-    "total": 15
+    "total": 16
   }
 }

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "mocha && npm run simulate && npm run verify",
+    "test": "mocha && npm run verify",
     "timing": "node src/verify-drand-timing.js",
     "verify": "ts-node tests/verify.ts",
     "simulate": "ts-node src/simulate.ts"

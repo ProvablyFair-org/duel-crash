@@ -15,6 +15,7 @@ import * as payouts     from './steps/payouts';
 import * as dataset     from './steps/dataset';
 import * as simulation  from './steps/simulation';
 import * as statistical from './steps/statistical';
+import * as artifacts   from './steps/artifacts';
 
 // ── Pre-flight: dataset hash ───────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ const results: StepResult[] = [
   ...payouts.run(ctx),       // Steps  7– 9
   ...dataset.run(ctx),       // Steps 10–12
   ...simulation.run(ctx),    // Steps 13–15
+  ...artifacts.run(ctx),     // Step 16
 ];
 
 // ── Display scored steps ─────────────────────────────────────────────────
