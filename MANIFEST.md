@@ -48,7 +48,7 @@ The dataset's `amountWon` and `effectiveEdge` fields are **transitory pre-rakeba
 
 ## Verification
 
-- **Verification steps:** 15 scored steps in `tests/verify.ts`
+- **Verification steps:** 16 scored steps in `tests/verify.ts`
 - **drand commitment timing:** 1,100/1,100 bets placed before drand publication (min margin: 0.404 s, median: 12.251 s, max: 13.779 s — authoritative transactions-API timestamp + drand chain formula)
 - **Unit tests:** Mocha (`tests/**/*Tests.ts`)
 - **Simulation:** 5,000,000 rounds (10 streams × 500K, Fisher's combined p = 0.5382)

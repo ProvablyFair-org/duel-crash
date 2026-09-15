@@ -53,7 +53,7 @@
       "step": 9,
       "name": "Phase Coverage",
       "status": "PASS",
-      "detail": "Phase A: 800/800, Phase B: 200/200, Phase C: 100/100 — total 1100"
+      "detail": "Phase A: 800/800, Phase B: 200/200, Phase C: 100/100 — total 1100/1100 against the capture plan in src/loader.ts (code constants, not the dataset header)"
     },
     {
       "step": 10,

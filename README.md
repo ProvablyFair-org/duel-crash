@@ -17,10 +17,10 @@ This is the verification codebase. It re-derives every audited crash point from 
 git clone git@github.com:ProvablyFair-org/duel-crash.git
 cd duel-crash
 npm install
-npm test           # unit tests + simulation + verification (15 scored steps)
+npm test           # unit tests + simulation + verification (16 scored steps)
 ```
 
-The repo ships `outputs/drand-api-verification.json` pre-computed (1,100 drand BLS signatures matched byte-for-byte against the public quicknet API at `api.drand.sh`), so `npm test` works **offline**. Expected: 15/15 PASS, **PROVABLY FAIR — Full Pass**.
+The repo ships `outputs/drand-api-verification.json` pre-computed (1,100 drand BLS signatures matched byte-for-byte against the public quicknet API at `api.drand.sh`), so `npm test` works **offline**. Expected: 16/16 PASS, **PROVABLY FAIR — Full Pass**.
 
 To regenerate the drand verification artifact from scratch (requires internet, fetches all 1,100 signatures from `api.drand.sh`):
 

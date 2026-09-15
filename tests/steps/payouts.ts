@@ -16,6 +16,20 @@
 
 import { instantCrashProbability, expectedRTP } from '../../src/rng';
 import type { VerifyContext, StepResult } from './context';
+import { EXPECTED_ROUNDS, EXPECTED_PHASE_ROUNDS } from '../../src/loader';
+
+// MONEY IS A VALUE DOMAIN, NOT A TOLERANCE. Credited amounts on this game are 6-decimal figures:
+// measured over this capture (2026-09-15), 1,100/1,100 amountWon values sit exactly on that grid
+// (stakes are 2-dp). `Math.abs(won - expected) < 0.000001` admits a credit that is not a legal
+// amount at all — and 1e-6 is the exact width the off-grid forgery was written to fit inside. It
+// scored a clean pass on the sibling groomers-van audit. Integer grid units leave nothing to slip
+// under; the slack below is IEEE-754 representation error in the scaling and nothing else, sized
+// from the magnitude of the scaled value rather than picked as a round number.
+const MONEY_DP  = 6;
+const offGridM  = (x: number): number => Math.abs(x * 10 ** MONEY_DP - Math.round(x * 10 ** MONEY_DP));
+const slackM    = (x: number): number => Math.max(1e-9, Math.abs(x * 10 ** MONEY_DP) * 1e-12);
+const onGridM   = (x: number): boolean => Number.isFinite(x) && offGridM(x) < slackM(x);
+const unitsM    = (x: number): number => Math.round(x * 10 ** MONEY_DP);
 
 export function run(ctx: VerifyContext): StepResult[] {
   const results: StepResult[] = [];
@@ -35,7 +49,12 @@ export function run(ctx: VerifyContext): StepResult[] {
       if (r.result.isWin) {
         // Win: amountWon = amount × cashout × (1 - edge/100)
         const expected = amount * cashout * (1 - edge / 100);
-        if (Math.abs(won - expected) < 0.000001) {
+        if (!onGridM(won)) {
+          wrong++;
+          if (errors.length < 3) {
+            errors.push(`round ${r.roundId}: amountWon ${r.result.amountWon} is not a legal ${MONEY_DP}-dp amount (off by ${offGridM(won).toExponential(3)})`);
+          }
+        } else if (unitsM(won) === unitsM(expected)) {
           correct++;
         } else {
           wrong++;
@@ -95,13 +114,25 @@ export function run(ctx: VerifyContext): StepResult[] {
 
   // Step 9: Phase Coverage
   {
-    const expectedA = 800, expectedB = 200, expectedC = 100;
-    const ok = phaseA.length === expectedA && phaseB.length === expectedB && phaseC.length === expectedC;
+    // Counts come from src/loader.ts — the capture plan as code — not from literals sitting in
+    // this file and not from the dataset's own header. The TOTAL is asserted too: with only the
+    // three phase counts checked, a dataset carrying extra rounds under an undeclared phase label
+    // satisfied every assertion here.
+    const expectedA = EXPECTED_PHASE_ROUNDS.A;
+    const expectedB = EXPECTED_PHASE_ROUNDS.B;
+    const expectedC = EXPECTED_PHASE_ROUNDS.C;
+    const totalOk   = rounds.length === EXPECTED_ROUNDS;
+    const labels    = new Set(rounds.map(r => r.phase));
+    const undeclared = [...labels].filter(p => !(p in EXPECTED_PHASE_ROUNDS));
+    const ok = totalOk && undeclared.length === 0
+      && phaseA.length === expectedA && phaseB.length === expectedB && phaseC.length === expectedC;
     results.push({
       step: 9,
       name: 'Phase Coverage',
       status: ok ? 'PASS' : 'FAIL',
-      detail: `Phase A: ${phaseA.length}/${expectedA}, Phase B: ${phaseB.length}/${expectedB}, Phase C: ${phaseC.length}/${expectedC} — total ${rounds.length}`,
+      detail: `Phase A: ${phaseA.length}/${expectedA}, Phase B: ${phaseB.length}/${expectedB}, Phase C: ${phaseC.length}/${expectedC} — total ${rounds.length}/${EXPECTED_ROUNDS} against the capture plan in src/loader.ts (code constants, not the dataset header)` +
+        (totalOk ? '' : '; ROUND COUNT MISMATCH') +
+        (undeclared.length ? `; UNDECLARED PHASE ${undeclared.join(', ')}` : ''),
     });
   }
 
