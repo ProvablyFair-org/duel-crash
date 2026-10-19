@@ -1,14 +1,17 @@
 const { readFileSync, writeFileSync, mkdirSync, existsSync } = require('fs');
 
 /**
- * Verify drand commitment timing proof.
+ * Check the bet-before-beacon margin.
  *
- * For each round in the dataset, verifies that commitmentBeforeDrand > 0,
+ * For each round in the dataset, checks that commitmentBeforeDrand > 0,
  * meaning the bet was placed (per the operator's transactions API) before
- * the drand beacon for that round was published. Both endpoints are
- * authoritative: betPlacedAt is from the operator's signed transaction
- * record, drandPublishedAt is computed locally from the public quicknet
- * chain formula.
+ * the drand beacon for that round was published. betPlacedAt is the
+ * operator's own transaction timestamp (operator-reported);
+ * drandPublishedAt is computed locally from the public quicknet chain
+ * formula. The margin times the BET, not the moment the round's
+ * serverSeedHash was shown: the capture recorded no receipt time for the
+ * commitment, so that the commitment preceded the beacon is an assumed
+ * premise (MANIFEST DL-2), not something this script measures.
  */
 
 const QUICKNET_GENESIS = 1692803367; // 2023-08-23T12:02:47Z
@@ -30,7 +33,7 @@ async function main() {
   const data = JSON.parse(readFileSync('./data/crash-master-1100rounds.json', 'utf8'));
   const rounds = data.rounds;
 
-  console.log('=== drand Commitment Timing Verification ===\n');
+  console.log('=== drand Bet Timing Verification ===\n');
   console.log(`Dataset: ${rounds.length} rounds`);
   console.log(`Chain: quicknet (${DRAND_CHAIN_HASH.substring(0, 16)}...)`);
   console.log(`Genesis: ${QUICKNET_GENESIS} | Period: ${QUICKNET_PERIOD}s\n`);
@@ -50,7 +53,7 @@ async function main() {
   console.log(`Chain formula: ${formulaPass}/${rounds.length} match${formulaFail > 0 ? ', ' + formulaFail + ' FAILED' : ''}\n`);
 
   // ── Step 2: Verify commitmentBeforeDrand > 0 for all rounds ──
-  console.log('── Step 2: Pre-Commitment Proof (bet placed before drand published) ──\n');
+  console.log('── Step 2: Bet Before Beacon (operator bet timestamp vs drand publication) ──\n');
   let positive = 0, nonPositive = 0, nullField = 0;
   let apiSourced = 0, otherSource = 0;
   for (const r of rounds) {
@@ -66,9 +69,9 @@ async function main() {
       console.log(`  FAIL: round ${r.roundId} — commitmentBeforeDrand = ${cbd}ms`);
     }
   }
-  console.log(`Authoritative (transactions-api): ${apiSourced}/${rounds.length}`);
+  console.log(`Operator-reported bet times:      ${apiSourced}/${rounds.length}`);
   console.log(`Other source:                     ${otherSource}`);
-  console.log(`Positive (pre-commit proven):     ${positive}/${rounds.length}`);
+  console.log(`Positive (bet before beacon):     ${positive}/${rounds.length}`);
   console.log(`Non-positive:                     ${nonPositive}`);
   console.log(`Null/missing:                     ${nullField}`);
 
@@ -134,39 +137,45 @@ async function main() {
   }
   console.log(`\n  Result: ${apiPass}/${rounds.length} signatures match, ${apiFail} failures\n`);
 
-  // Save full results to JSON
-  const outputDir = './outputs';
+  // Save full results to JSON. The committed outputs/drand-api-verification.json is an artifact of
+  // record pinned in src/artifact-pins.ts, so a routine run writes under outputs/run/ and only an explicit
+  // PF_EMIT=1 refreshes the committed copy (then re-pin). No run metadata: the fetch time is not written
+  // into the artifact (the committed copy's fetch time, 2026-04-20T12:14:09.491Z, is recorded in
+  // MANIFEST.md), so a re-fetch that returns the same signatures reproduces the pinned bytes.
+  const outputDir = process.env.PF_EMIT === '1' ? './outputs' : './outputs/run';
   if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
   writeFileSync(`${outputDir}/drand-api-verification.json`, JSON.stringify({
-    generatedAt: new Date().toISOString(),
     chain: DRAND_CHAIN_HASH,
     totalRounds: rounds.length,
     passed: apiPass,
     failed: apiFail,
     results: apiResults,
   }, null, 2));
-  console.log(`  → outputs/drand-api-verification.json written\n`);
+  console.log(`  → ${outputDir.slice(2)}/drand-api-verification.json written\n`);
 
   // ── Summary ──
   console.log('\n══════════════════════════════════════════════');
-  console.log('  TIMING PROOF SUMMARY');
+  console.log('  TIMING SUMMARY');
   console.log('══════════════════════════════════════════════\n');
   console.log(`  Chain formula verified:         ${formulaPass}/${rounds.length}`);
-  console.log(`  Authoritative source rounds:    ${apiSourced}/${rounds.length}`);
+  console.log(`  Operator-reported bet times:    ${apiSourced}/${rounds.length}`);
   console.log(`  Bet placed before drand:        ${positive}/${rounds.length}`);
   console.log(`  Minimum margin:                 ${vals[0]}ms (${(vals[0] / 1000).toFixed(3)}s)`);
-  console.log(`  drand API signatures matched:   ${apiPass}/${rounds.length}`);
+  console.log(`  drand API signatures verified:  ${apiPass}/${rounds.length}`);
 
   const pass = formulaFail === 0 && nonPositive === 0 && nullField === 0 && apiFail === 0;
 
   if (pass) {
     console.log('\n  VERDICT: PASS');
-    console.log('  Every bet was accepted by the operator\'s database');
-    console.log('  before the drand beacon for that round was published. Proven by:');
-    console.log('  1. betPlacedAt: timestamp_raw from /api/v2/user/transactions?type=crash_bets');
+    console.log('  On the operator\'s own clock, every bet was accepted');
+    console.log('  before the drand beacon for that round was published. Measured from:');
+    console.log('  1. betPlacedAt: timestamp_raw from /api/v2/user/transactions?type=crash_bets (operator-reported)');
     console.log('  2. drandPublishedAt: computed locally from chain formula (genesis + (round-1) × 3s)');
     console.log('  3. commitmentBeforeDrand = drandPublishedAt × 1000 − betPlacedAt (ms)');
     console.log('  4. All 1100 values are positive (min ' + vals[0] + 'ms, median ' + vals[Math.floor(vals.length / 2)] + 'ms)');
+    console.log('  This times the bet, not when the seed hash was shown. A seed matching its hash');
+    console.log('  is a consistency check; that each commitment existed before its beacon is');
+    console.log('  assumed (MANIFEST DL-2): the capture recorded no receipt time for it.');
   } else {
     console.log('\n  VERDICT: FAIL — see details above');
     process.exitCode = 1;

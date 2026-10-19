@@ -1,0 +1,527 @@
+[
+  {
+    "name": "M01 revealed server seed corrupted",
+    "step": 1,
+    "runner": "verify",
+    "expect": "✗ Step  1:",
+    "guard": "Step 1 opens every per-round commitment: a revealed seed that does not hash to its serverSeedHash is the failure commit-reveal exists to detect.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[40].result.serverSeed = '00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff'; // MUTATION"
+  },
+  {
+    "name": "M01b one round dropped from the capture",
+    "step": 1,
+    "runner": "verify",
+    "expect": "✗ Step  1:",
+    "guard": "Step 1 counts the commitments it opened against EXPECTED_ROUNDS in src/loader.ts, so a truncated capture fails instead of shrinking its own denominator.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds.pop(); // MUTATION"
+  },
+  {
+    "name": "M02 bet accepted after the beacon published",
+    "step": 2,
+    "runner": "verify",
+    "expect": "✗ Step  2:",
+    "guard": "Step 2 requires every bet to be accepted strictly before its drand beacon was published; a non-positive margin is a round whose beacon could have been known.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[10].timing.betPlacedAt = rounds[10].timing.drandPublishedAt * 1000 + 500; rounds[10].timing.commitmentBeforeDrand = -500; // MUTATION"
+  },
+  {
+    "name": "M02b a client-clock timestamp slipped in",
+    "step": 2,
+    "runner": "verify",
+    "expect": "✗ Step  2:",
+    "guard": "Step 2 binds the timestamp provenance: a capture-only (client clock) row is weaker evidence and fails the declared transactions-api population.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[11].timing.source = 'capture-only'; // MUTATION"
+  },
+  {
+    "name": "M03 beacon round re-used out of order",
+    "step": 3,
+    "runner": "verify",
+    "expect": "✗ Step  3:",
+    "guard": "Step 3 requires drand rounds strictly increasing in capture order, so no beacon was re-used or taken out of order.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[5].result.drandRoundId = rounds[4].result.drandRoundId; // MUTATION"
+  },
+  {
+    "name": "M04 one commitment serving two rounds",
+    "step": 4,
+    "runner": "verify",
+    "expect": "✗ Step  4:",
+    "guard": "Step 4 requires one fresh commitment per round against EXPECTED_DISTINCT_SEEDS.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[21].result.serverSeed = rounds[20].result.serverSeed; rounds[21].result.serverSeedHash = rounds[20].result.serverSeedHash; // MUTATION"
+  },
+  {
+    "name": "M05 served crash point nudged by one hundredth",
+    "step": 5,
+    "runner": "verify",
+    "expect": "✗ Step  5:",
+    "guard": "Step 5 recomputes every crash point by exact equality.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[30].result.crashPoint = Math.round(rounds[30].result.crashPoint * 100 + 1) / 100; // MUTATION"
+  },
+  {
+    "name": "M05b served-grid floor guard",
+    "step": 5,
+    "runner": "verify",
+    "expect": "SERVED GRID (CRASH-10)",
+    "guard": "Step 5 asserts every served crash point is on the 2-dp grid at or above the declared floor in its own right, not only through the recomputation: raising the declared floor to 1.50 must fail it while every recomputation still matches.",
+    "file": "src/loader.ts",
+    "find": "export const CRASH_POINT_FLOOR = 1;",
+    "replace": "export const CRASH_POINT_FLOOR = 1.5; // MUTATION"
+  },
+  {
+    "name": "M05c docs-site derive.js forged AND re-pinned",
+    "step": 5,
+    "runner": "verify",
+    "expect": "SITE VERIFIER PARITY (CRASH-24)",
+    "guard": "Step 5 executes the vendored docs-site verifier on every round: a derive.js whose logic changed must disagree with the served crash points even when its pin is updated to match.",
+    "file": "verifier-parity/games/crash/derive.js",
+    "find": "const HOUSE_EDGE_FACTOR = 0.999;",
+    "replace": "const HOUSE_EDGE_FACTOR = 0.998;",
+    "repin": [
+      {
+        "file": "src/site-verifier.ts",
+        "find": "d6099cd7da6879a16eac08ea2efe20aea1f7b242cb3894cf1d8360a6da9aa833",
+        "hashOf": "verifier-parity/games/crash/derive.js"
+      }
+    ]
+  },
+  {
+    "name": "M05d docs-site derive.js edited without re-pin",
+    "step": 5,
+    "runner": "verify",
+    "expect": "SITE VERIFIER PARITY (CRASH-24)",
+    "guard": "The vendored site bytes must hash to their pins before anything runs; a one-comment edit that changes no logic still fails.",
+    "file": "verifier-parity/games/crash/derive.js",
+    "find": "const HOUSE_EDGE_FACTOR = 0.999;",
+    "replace": "const HOUSE_EDGE_FACTOR = 0.999; // edited"
+  },
+  {
+    "name": "M05e live-site chunk forged AND re-pinned",
+    "step": 5,
+    "runner": "verify",
+    "expect": "LIVE-SITE VERIFIER PARITY (CRASH-24)",
+    "guard": "Step 5 executes the live verify-bets bundle on every round: a chunk whose Duel Crash method prints a different crash point must disagree even when the chunk is re-pinned.",
+    "file": "verifier-parity/live-site/chunks/34934e0e762aa37e.js",
+    "find": "c=Math.max(1,Math.floor(100*f)/100).toFixed(2)",
+    "replace": "c=Math.max(1,Math.floor(100*f)/100+.01).toFixed(2)",
+    "repin": [
+      {
+        "file": "src/live-site-verifier.ts",
+        "find": "9fb319dec0d79f9bf5851ec8e0052b6b2125e603be03d12b78a0fe99eed817d1",
+        "hashOf": "verifier-parity/live-site/chunks/34934e0e762aa37e.js"
+      }
+    ]
+  },
+  {
+    "name": "M05f live-site chunk edited without re-pin",
+    "step": 5,
+    "runner": "verify",
+    "expect": "LIVE-SITE VERIFIER PARITY (CRASH-24)",
+    "guard": "The vendored live-site bytes must hash to their pins before the runner executes them.",
+    "file": "verifier-parity/live-site/chunks/34934e0e762aa37e.js",
+    "find": "c=Math.max(1,Math.floor(100*f)/100).toFixed(2)",
+    "replace": "c=Math.max(1,Math.floor(100*f)/100).toFixed(2) "
+  },
+  {
+    "name": "M05g operator Verify-tab file logic changed (hex bytes XOR 1) and re-pinned",
+    "step": 5,
+    "runner": "verify",
+    "expect": "OPERATOR VERIFY-TAB CODE PARITY (CRASH-09)",
+    "guard": "CRASH-09: forged evidence — Duel's vendored Crash Verify-tab code is changed on an uncited line AND its SHA-256 pin re-computed, so the hash check accepts it; executing it on every round must expose it.",
+    "edits": [
+      {
+        "file": "evidence/verify-tab/duel-verify-tab-crash-2026-09-26.js",
+        "find": "bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);",
+        "replace": "bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16) ^ 1;"
+      }
+    ],
+    "repin": [
+      {
+        "file": "src/operator-verifier.ts",
+        "find": "c699cd5445fb3906614a51fda58d275c9ce1caa5c6402e412dfd20264f05271d",
+        "hashOf": "evidence/verify-tab/duel-verify-tab-crash-2026-09-26.js"
+      }
+    ]
+  },
+  {
+    "name": "M05h operator Verify-tab file byte changed without re-pin",
+    "step": 5,
+    "runner": "verify",
+    "expect": "does not match its pinned SHA-256",
+    "guard": "CRASH-09: the vendored operator file must hash to its pin before it runs.",
+    "file": "evidence/verify-tab/duel-verify-tab-crash-2026-09-26.js",
+    "find": "// Code written in JavaScript",
+    "replace": "// Code written in javascript"
+  },
+  {
+    "name": "M05i operator runner changed without re-pin",
+    "step": 5,
+    "runner": "verify",
+    "expect": "does not match its pinned SHA-256",
+    "guard": "CRASH-09: the runner that executes the operator file is pinned too.",
+    "file": "verifier-parity/operator/run-operator-verifier.cjs",
+    "find": "const ROUND_TIMEOUT_MS = 30_000;",
+    "replace": "const ROUND_TIMEOUT_MS = 31_000;"
+  },
+  {
+    "name": "M05j operator runner forged (drops the last beacon byte) and re-pinned",
+    "step": 5,
+    "runner": "verify",
+    "expect": "OPERATOR VERIFY-TAB CODE PARITY (CRASH-09)",
+    "guard": "CRASH-09: a re-pinned runner that feeds the operator code the wrong input must be caught by comparing its output with the served crash point and src/rng.ts, not only by the pin.",
+    "edits": [
+      {
+        "file": "verifier-parity/operator/run-operator-verifier.cjs",
+        "find": "const CALL = (m) => m.validateCrashResult(m.serverSeed, m.drandSeed);",
+        "replace": "const CALL = (m) => m.validateCrashResult(m.serverSeed, m.drandSeed.slice(0, -2));"
+      }
+    ],
+    "repin": [
+      {
+        "file": "src/operator-verifier.ts",
+        "find": "1d29adf63a96ee038af7314efe0173590a0dadceda66633bb6b9948253ff22e0",
+        "hashOf": "verifier-parity/operator/run-operator-verifier.cjs"
+      }
+    ]
+  },
+  {
+    "name": "M05k src/rng.ts cites an operator line that does not carry the quoted text",
+    "step": 5,
+    "runner": "verify",
+    "expect": "src/rng.ts operator citations",
+    "guard": "CRASH-09: every citation in src/rng.ts OPERATOR_SOURCE_CITES must quote the pinned operator file at the line it names.",
+    "file": "src/rng.ts",
+    "find": "{ line: 63, text: 'const houseEdge = 0.001;'",
+    "replace": "{ line: 62, text: 'const houseEdge = 0.001;'"
+  },
+  {
+    "name": "M06 Phase C moved to another target in the plan",
+    "step": 6,
+    "runner": "verify",
+    "expect": "✗ Step  6:",
+    "guard": "Step 6 checks Phase C against the declared stake/target plan in src/loader.ts, so the comparison group cannot drift to whatever the data holds.",
+    "file": "src/loader.ts",
+    "find": "export const PHASE_C_TARGET = 2;",
+    "replace": "export const PHASE_C_TARGET = 5; // MUTATION"
+  },
+  {
+    "name": "M06b elevated-stake win settled at a worse per-unit return",
+    "step": 6,
+    "runner": "verify",
+    "expect": "✗ Step  6:",
+    "guard": "Step 6 compares the per-unit return of every elevated-stake win with the base-stake wins at the same target, exact on the 6-dp grid.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[1001].result.amountWon = '19.96'; // MUTATION"
+  },
+  {
+    "name": "M07 win credited one grid unit high",
+    "step": 7,
+    "runner": "verify",
+    "expect": "✗ Step  7:",
+    "guard": "Step 7 compares every win in integer 6-dp units: one unit off is a different credit.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[0].result.amountWon = '0.014986'; // MUTATION"
+  },
+  {
+    "name": "M07b served edge field differs from the declared edge",
+    "step": 7,
+    "runner": "verify",
+    "expect": "✗ Step  7:",
+    "guard": "Step 7 compares the served effectiveEdge with the declared constant on every round instead of reading it into the expected payout.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[2].result.effectiveEdge = 0.2; // MUTATION"
+  },
+  {
+    "name": "M07c tie settled as a loss",
+    "step": 7,
+    "runner": "verify",
+    "expect": "✗ Step  7:",
+    "guard": "Step 7 checks isWin = crashPoint >= target on every round; a tie (crash == target) settled as a loss breaks the declared boundary.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[261].result.isWin = false; rounds[261].result.amountWon = '0'; // MUTATION"
+  },
+  {
+    "name": "M08 edge constant mis-set in the formula",
+    "step": 8,
+    "runner": "verify",
+    "expect": "✗ Step  8:",
+    "guard": "Step 8 decides RTP ≤ 0.999 in integers; an edge constant of 0.05% puts the RTP above the claimed ceiling.",
+    "file": "src/rng.ts",
+    "find": "const HOUSE_EDGE = 0.001;",
+    "replace": "const HOUSE_EDGE = 0.0005; // MUTATION"
+  },
+  {
+    "name": "M09 a round relabelled into another phase",
+    "step": 9,
+    "runner": "verify",
+    "expect": "✗ Step  9:",
+    "guard": "Step 9 compares per-phase counts with the capture plan in src/loader.ts, not the dataset header.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[3].phase = 'B'; // MUTATION"
+  },
+  {
+    "name": "M10 dataset byte changed, pre-flight abort disabled",
+    "step": 10,
+    "runner": "verify",
+    "expect": "✗ Step 10:",
+    "guard": "Step 10 re-asserts the dataset pin on its own, so a verifier whose pre-flight abort was removed still fails a changed dataset.",
+    "edits": [
+      {
+        "file": "tests/verify.ts",
+        "find": "if (!hashCheck.match) { process.exit(1); }",
+        "replace": "// MUTATION: pre-flight abort removed"
+      },
+      {
+        "file": "data/crash-master-1100rounds.json",
+        "find": "\"createdAt\": \"2026-04-14T20:17:12.676Z\"",
+        "replace": "\"createdAt\": \"2026-04-14T20:17:12.677Z\""
+      }
+    ]
+  },
+  {
+    "name": "M11 beacon publication time off the chain formula",
+    "step": 11,
+    "runner": "verify",
+    "expect": "✗ Step 11:",
+    "guard": "Step 11 recomputes every beacon's publication time from the quicknet chain formula.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[12].timing.drandPublishedAt += 3; // MUTATION"
+  },
+  {
+    "name": "M12 independent model mis-wired",
+    "step": 12,
+    "runner": "verify",
+    "expect": "✗ Step 12:",
+    "guard": "Step 12 binds the independent per-value model to every live round and compares its counts with src/rng.ts exactly.",
+    "file": "tests/steps/crash-model.ts",
+    "find": "const raw = (TWO32 / (v + 1)) * 0.999;",
+    "replace": "const raw = (TWO32 / (v + 1)) * 0.9985; // MUTATION"
+  },
+  {
+    "name": "M12b negative control neutered",
+    "step": 12,
+    "runner": "verify",
+    "expect": "negative control: a map with edge factor 0.998",
+    "guard": "Step 12's negative control must show the count comparison can fail; a 'wrong' map equal to the true one leaves it with nothing to catch, and the step must say so.",
+    "file": "tests/steps/dataset.ts",
+    "find": "Math.max(1, Math.floor(Math.max(1, (TWO32 / (v + 1)) * 0.998) * 100) / 100);",
+    "replace": "crashFromValue(v); // MUTATION"
+  },
+  {
+    "name": "M13 Pass 1 Fisher p forged AND re-pinned",
+    "step": 13,
+    "runner": "verify",
+    "expect": "✗ Step 13:",
+    "guard": "Step 13 replays Pass 1 from its seeds and compares every committed scalar with the replay; a forged scalar fails even when the artifact is re-pinned.",
+    "file": "outputs/simulation-results.json",
+    "find": "\"pValue\": 0.5382059357146423",
+    "replace": "\"pValue\": 0.6382059357146423",
+    "repin": [
+      {
+        "file": "src/artifact-pins.ts",
+        "find": "d78d38a7e2e98da89dd0781bfd03dba459049d0ebcf94e1614c9b48afff9d555",
+        "hashOf": "outputs/simulation-results.json"
+      }
+    ]
+  },
+  {
+    "name": "M14 Pass 2 return forged AND re-pinned",
+    "step": 14,
+    "runner": "verify",
+    "expect": "✗ Step 14:",
+    "guard": "Step 14 replays Pass 2 and compares every committed scalar (here the played-target return in hundredths) with the replay.",
+    "file": "outputs/simulation-results.json",
+    "find": "\"returnCents\": 1098999210,",
+    "replace": "\"returnCents\": 1098999209,",
+    "repin": [
+      {
+        "file": "src/artifact-pins.ts",
+        "find": "d78d38a7e2e98da89dd0781bfd03dba459049d0ebcf94e1614c9b48afff9d555",
+        "hashOf": "outputs/simulation-results.json"
+      }
+    ]
+  },
+  {
+    "name": "M14b captured rounds forced to lose (rank rule must fire)",
+    "step": 14,
+    "runner": "verify",
+    "expect": "captured rounds lose more often than their own seed's reference",
+    "guard": "CRASH-21: the pre-registered captured-vs-reference rank rule must be reachable — a seed chosen after its beacon was known shows up as captured rounds losing more often than the seed's reference draws.",
+    "file": "tests/steps/sim-replay.ts",
+    "find": "const w0 = cp0 >= t ? 1 : 0;",
+    "replace": "const w0 = 0; // MUTATION"
+  },
+  {
+    "name": "M14c reference draws paid short (return rule must fire)",
+    "step": 14,
+    "runner": "verify",
+    "expect": "the seeds pay less than the exact law at the targets played",
+    "guard": "CRASH-21: the pre-registered return rule must be reachable — a seed population paying 0.2 % less than the exact law at the played targets is flagged.",
+    "file": "tests/steps/sim-replay.ts",
+    "find": "deterministicHex('pass2-drand-' + s, d, 48)) >= t) wins++;",
+    "replace": "deterministicHex('pass2-drand-' + s, d, 48)) >= t * 1.002) wins++; // MUTATION"
+  },
+  {
+    "name": "M14d captured round no longer reproduced from its real beacon",
+    "step": 14,
+    "runner": "verify",
+    "expect": "captured round(s) not reproduced from their revealed seed and real beacon",
+    "guard": "CRASH-21: window 0 of the cherry-pick screen is the captured round; the replay must reproduce its served crash point, or the reference is not being compared with what the casino settled.",
+    "file": "tests/steps/simulation.ts",
+    "find": "crashPoint: r.result.crashPoint, target: r.request.auto_cashout,",
+    "replace": "crashPoint: r.result.crashPoint + 0.01, target: r.request.auto_cashout, // MUTATION"
+  },
+  {
+    "name": "M15 drand API record forged AND re-pinned",
+    "step": 15,
+    "runner": "verify",
+    "expect": "✗ Step 15:",
+    "guard": "Step 15 binds each round's signature to its pinned api.drand.sh record and recomputes the file's counters; a forged record fails even when re-pinned.",
+    "file": "outputs/drand-api-verification.json",
+    "find": "\"apiSignature\": \"b18fa6dc92304844fc4e868d708953e6b628b3f88d4381249d32264df1bfe5bc20aa0905e57fe54063010881767fd56d\"",
+    "replace": "\"apiSignature\": \"a18fa6dc92304844fc4e868d708953e6b628b3f88d4381249d32264df1bfe5bc20aa0905e57fe54063010881767fd56d\"",
+    "repin": [
+      {
+        "file": "src/artifact-pins.ts",
+        "find": "6de7a635b429b9412de25999e1501a3ad8209a23cbdd0830ea89656df3c48d1c",
+        "hashOf": "outputs/drand-api-verification.json"
+      }
+    ]
+  },
+  {
+    "name": "M16 per-target floor raised above a captured target",
+    "step": 16,
+    "runner": "verify",
+    "expect": "✗ Step 16:",
+    "guard": "Step 16 holds every declared cash-out target to the floor in src/loader.ts; 1.1× has 51 rounds, so a floor of 60 must fail.",
+    "file": "src/loader.ts",
+    "find": "export const MIN_ROUNDS_PER_CASHOUT_TARGET = 45;",
+    "replace": "export const MIN_ROUNDS_PER_CASHOUT_TARGET = 60; // MUTATION"
+  },
+  {
+    "name": "M16b undeclared cash-out target in the data",
+    "step": 16,
+    "runner": "verify",
+    "expect": "✗ Step 16:",
+    "guard": "Step 16 fails a cash-out target present in the data but absent from the declared plan.",
+    "file": "tests/verify.ts",
+    "find": "const rounds = ds.rounds;",
+    "replace": "const rounds = ds.rounds; rounds[500].request.auto_cashout = 3; rounds[500].result.isWin = rounds[500].result.crashPoint >= 3; // MUTATION"
+  },
+  {
+    "name": "M17 pinned artifact byte appended without re-pin",
+    "step": 17,
+    "runner": "verify",
+    "expect": "✗ Step 17:",
+    "guard": "Step 17 hashes every artifact of record against src/artifact-pins.ts.",
+    "file": "outputs/rtp-convergence.html",
+    "find": "</html>",
+    "replace": "</html>\n"
+  },
+  {
+    "name": "M17b pinned artifact deleted",
+    "step": 17,
+    "runner": "verify",
+    "expect": "✗ Step 17:",
+    "guard": "An absent artifact of record is a hard fail, not a pass by absence.",
+    "delete": [
+      "outputs/drand-api-verification.json"
+    ]
+  },
+  {
+    "name": "M17c impossible value written AND re-pinned",
+    "step": 17,
+    "runner": "verify",
+    "expect": "VALUE DOMAINS (CRASH-27)",
+    "guard": "Step 17 checks every numeric leaf against src/domains.ts: more captured wins than captured rounds is impossible and must fail even though the artifact is re-pinned. (Step 14's replay also catches it; the marker proves the domain check fired on its own.)",
+    "file": "outputs/simulation-results.json",
+    "find": "\"capturedWins\": 671,",
+    "replace": "\"capturedWins\": 5000,",
+    "repin": [
+      {
+        "file": "src/artifact-pins.ts",
+        "find": "d78d38a7e2e98da89dd0781bfd03dba459049d0ebcf94e1614c9b48afff9d555",
+        "hashOf": "outputs/simulation-results.json"
+      }
+    ]
+  },
+  {
+    "name": "M18 live sample sorted before the fit",
+    "step": 18,
+    "runner": "verify",
+    "expect": "ℹ Step 18:",
+    "guard": "Step 18 reacts to the sample: a sorted sequence has lag-1 correlation near 1 and must turn the step to INFO (informational: not counted, verdict unchanged; the run is rejected by the reproduction gate because the committed Step 18 record changes).",
+    "file": "tests/steps/live-fit.ts",
+    "find": "const u = rounds.map(r => valueFromRound(r.result.serverSeed, r.result.drandRandomness) / TWO32);",
+    "replace": "const u = rounds.map(r => valueFromRound(r.result.serverSeed, r.result.drandRandomness) / TWO32).sort((a, b) => a - b); // MUTATION"
+  },
+  {
+    "name": "MC3a one setting misses its stated figure: cash-out target 5000.00× wins 1 % less often in the model",
+    "step": 16,
+    "runner": "test",
+    "expect": "VERDICT: RTP FIGURE OVERSTATED",
+    "expectExit": 5,
+    "regen": [
+      "rtp-table",
+      "record"
+    ],
+    "guard": "FIXPASS2 class C3, 14 Oct 2026: (i) a miss on ONE setting must end RTP FIGURE OVERSTATED, exit 5, never exit 1 or 2. The count of draws at or above one cash-out target no captured round used (5000.00×; the capture's five targets are all below 11×) is lowered by 1 % in the game model (tests/steps/crash-model.ts countAtOrAbove, which the RTP table and the coverage checks read): that setting returns 98.9 %, 1 pp under the flat 99.9 % claim. Table and record regenerated in the copy, so the package is consistent and the only thing wrong is the miss. Runner test = mocha then verify, as npm test runs them: no unit test, label check, simulation check or operator-FLAG branch may end the run first.",
+    "file": "tests/steps/crash-model.ts",
+    "find": "export function countAtOrAbove(x: number): number {\n  return countAtOrAboveWith(crashFromValue, x);\n}",
+    "replace": "export function countAtOrAbove(x: number): number {\n  const n = countAtOrAboveWith(crashFromValue, x);\n  return Math.round(x * 100) === 500000 ? Math.floor(n * 0.99) : n; // MUTATION: one cash-out target 1 % short\n}"
+  },
+  {
+    "name": "MC3as the same change as MC3a, RTP table NOT regenerated: a stale table is a reproduction failure",
+    "step": 16,
+    "runner": "verify",
+    "expect": "DIFFERS from this run",
+    "expectExit": 1,
+    "guard": "Ruling 14 Oct 2026 (FIXPASS2): a committed RTP table that does not equal the run or its pin is a reproduction failure, exit 1, miss or no miss. MC3a without regenerating the table must end exit 1 with the table reported as differing, never exit 5: the miss is only reported on a consistent package.",
+    "file": "tests/steps/crash-model.ts",
+    "find": "export function countAtOrAbove(x: number): number {\n  return countAtOrAboveWith(crashFromValue, x);\n}",
+    "replace": "export function countAtOrAbove(x: number): number {\n  const n = countAtOrAboveWith(crashFromValue, x);\n  return Math.round(x * 100) === 500000 ? Math.floor(n * 0.99) : n; // MUTATION: one cash-out target 1 % short\n}"
+  },
+  {
+    "name": "MC3b the stated figure raised in the claim source: 99.9 % -> 100.1 %",
+    "step": 16,
+    "runner": "test",
+    "expect": "VERDICT: RTP FIGURE OVERSTATED",
+    "expectExit": 5,
+    "regen": [
+      "rtp-table",
+      "record"
+    ],
+    "guard": "FIXPASS2 class C3, 14 Oct 2026: (ii) the published figure raised where the claim is stated (src/rtp-settings.ts RTP_CLAIM, the fairness page's houseEdge 0.001) to 100.1 %, 0.2 pp above what every setting really returns: every setting misses by more than the 0.1 pp band, so the run must end RTP FIGURE OVERSTATED, exit 5. Table and record regenerated in the copy. Runner test = mocha then verify, as npm test runs them: no unit test, label check or operator-FLAG branch may end the run first.",
+    "file": "src/rtp-settings.ts",
+    "find": "  kind: 'flat',\n  rtp: '0.999',",
+    "replace": "  kind: 'flat',\n  rtp: '1.001', // MUTATION: stated figure raised"
+  },
+  {
+    "name": "MC3bs the same change as MC3b, RTP table NOT regenerated: a stale table is a reproduction failure",
+    "step": 16,
+    "runner": "verify",
+    "expect": "DIFFERS from this run",
+    "expectExit": 1,
+    "guard": "Ruling 14 Oct 2026 (FIXPASS2): a committed RTP table that does not equal the run or its pin is a reproduction failure, exit 1, miss or no miss. MC3b without regenerating the table must end exit 1 with the table reported as differing, never exit 5: the miss is only reported on a consistent package.",
+    "file": "src/rtp-settings.ts",
+    "find": "  kind: 'flat',\n  rtp: '0.999',",
+    "replace": "  kind: 'flat',\n  rtp: '1.001', // MUTATION: stated figure raised"
+  }
+]

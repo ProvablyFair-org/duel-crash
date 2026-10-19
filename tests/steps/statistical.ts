@@ -28,7 +28,10 @@ export function run(ctx: VerifyContext): InfoItem[] {
       const won = parseFloat(r.result.amountWon);
       const entry = byCashout.get(target) || { wagered: 0, returned: 0, count: 0 };
       entry.wagered += amount;
-      entry.returned += r.result.isWin ? won : 0; // amountWon IS total payout (amount × cashout × 0.999)
+      // amountWon is the captured field, amount × cashout × 0.999 on every win (Step 7). It is not the wallet
+      // credit, which was the full amount × cashout on the 3 wins looked up (MANIFEST.md#money-model, DL-1),
+      // so these figures are the recorded return, a variance illustration only.
+      entry.returned += r.result.isWin ? won : 0;
       entry.count++;
       byCashout.set(target, entry);
     }
@@ -37,7 +40,7 @@ export function run(ctx: VerifyContext): InfoItem[] {
       const rtp = data.wagered > 0 ? data.returned / data.wagered : 0;
       info.push({
         label: `Live RTP @ ${target}x (n=${data.count})`,
-        detail: `${(rtp * 100).toFixed(2)}% — pre-rakeback display values (see MANIFEST §Money Model); small-n variance — informational only (simulation is authoritative)`,
+        detail: `${(rtp * 100).toFixed(2)}% — informational only (simulation is authoritative)`,
       });
     }
   }

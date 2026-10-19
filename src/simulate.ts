@@ -8,9 +8,10 @@
  *         Serial independence tested on full 5M combined stream.
  *         RTP tracked at 5 cashout targets: 1.5×, 2×, 5×, 10×, 50×.
  *
- * Pass 2: All 1100 casino server seeds × 1000 random drand values each.
- *         Tests whether casino seeds produce expected distributions when
- *         combined with unknown external randomness.
+ * Pass 2: All 1100 casino server seeds × 10,000 deterministic drand values each (raised from 1,000 on 2026-09-26 to the profile floor),
+ *         each at the cash-out target its captured round was played at: the return of the played targets
+ *         against its exact mean and variance, and the captured round ranked among its seed's reference
+ *         draws (rewritten 2026-09-26, profile CRASH-21; it was a per-seed chi-squared fail count).
  *
  * Output: outputs/simulation-results.json + outputs/rtp-convergence.html
  */
@@ -18,6 +19,11 @@
 import * as crypto from 'crypto';
 import * as fs     from 'fs';
 import * as path   from 'path';
+
+// Pinned charts carry no CDN script (Mike 2026-09-28, F16): the library is inlined verbatim from the
+// chart.js devDependency (exact version, package-lock.json), so the artifact renders offline, forever,
+// and every byte it executes is inside the pinned file.
+const CHARTJS_SOURCE = fs.readFileSync(path.join(path.dirname(require.resolve('chart.js')), 'chart.umd.js'), 'utf8');
 
 import { computeCrashPoint, computeCrashPointFromBuffer, survivalProbability } from './rng';
 import { chiSquaredTest, chiSquaredPValue, lag1Autocorrelation, runsTest } from './stats';
@@ -30,12 +36,24 @@ function deterministicHex(seed: string, index: number, bytes: number): string {
   return crypto.createHmac('sha256', seed).update(String(index)).digest('hex').slice(0, bytes * 2);
 }
 
+// ── Output location ────────────────────────────────────────────────────────
+// A SIMULATION RUN MUST NOT REWRITE THE ARTIFACTS IT IS SCORED AGAINST. simulation-results.json
+// and rtp-convergence.html are pinned by SHA-256 in src/artifact-pins.ts (Step 17) and their
+// figures are quoted in the report; a routine `npm run simulate` used to overwrite both, so any
+// run on any machine silently replaced the evidence. Without PF_EMIT=1 this run writes under
+// outputs/run/ — gitignored, a run record. Refreshing the committed copies is the separate,
+// deliberate `PF_EMIT=1 npm run simulate`, followed by re-pinning in the same commit.
+const PF_EMIT    = process.env.PF_EMIT === '1';
+const OUTPUTS_DIR = path.join(__dirname, '../outputs');
+const EMIT_DIR    = PF_EMIT ? OUTPUTS_DIR : path.join(OUTPUTS_DIR, 'run');
+const EMIT_LABEL  = PF_EMIT ? 'outputs' : 'outputs/run';
+
 // ── Configuration ──────────────────────────────────────────────────────────
 
 const PASS1_STREAMS      = 10;
 const PASS1_ROUNDS_EACH  = 500_000;
 const PASS1_ROUNDS_TOTAL = PASS1_STREAMS * PASS1_ROUNDS_EACH;
-const PASS2_DRAND_PER_SEED = 1_000;
+const PASS2_DRAND_PER_SEED = 10_000;
 
 const CASHOUT_TARGETS = [1.5, 2, 5, 10, 50];
 
@@ -183,56 +201,81 @@ function runPass1() {
 // ── Pass 2 ─────────────────────────────────────────────────────────────────
 
 function runPass2() {
-  console.log('\n══ Pass 2: Casino Seeds ══');
+  console.log('\n══ Pass 2: Casino Seeds — cherry-pick screen at the targets actually played ══');
 
   const dsRaw = fs.readFileSync(path.join(__dirname, '../data/crash-master-1100rounds.json'), 'utf8');
   const ds: CrashDataset = JSON.parse(dsRaw);
-  const seeds = [...new Set(ds.rounds.map(r => r.result.serverSeed))];
+  // One round per revealed seed, first-appearance order (all 1,100 seeds are distinct).
+  const seen = new Set<string>();
+  const rounds = ds.rounds.filter(r => (seen.has(r.result.serverSeed) ? false : (seen.add(r.result.serverSeed), true)));
 
-  console.log(`  ${seeds.length} unique casino seeds × ${PASS2_DRAND_PER_SEED} random drand values each\n`);
+  console.log(`  ${rounds.length} revealed seeds × ${PASS2_DRAND_PER_SEED} deterministic drand values each, at each round's own cash-out target\n`);
 
-  const expFracs = expectedFractions();
-  let chi2Fails = 0;
-  let totalRTP = 0;
+  // Profile CRASH-21 (2026-09-26): the statistic is the return of the cash-out targets actually played,
+  // against its exact mean and variance, plus the captured round ranked among its own seed's reference
+  // draws (exact permutation null). This replaced the per-seed chi-squared fail count. tests/steps/
+  // sim-replay.ts recomputes every figure below independently and Step 14 scores the replay.
+  let returnCents = 0, expectedReturn = 0, returnVariance = 0;
+  let capturedReplayMismatches = 0, capturedWins = 0;
+  let rankNumerator = 0, rankDenominator = 0;
   const startTime = Date.now();
 
-  for (let s = 0; s < seeds.length; s++) {
-    const serverSeed = seeds[s];
-    const keyBuffer = Buffer.from(serverSeed, 'hex');
-    const observed = new Array(NUM_BINS).fill(0);
-    let payout = 0;
+  for (let s = 0; s < rounds.length; s++) {
+    const round = rounds[s];
+    const keyBuffer = Buffer.from(round.result.serverSeed, 'hex');
+    const target = round.request.auto_cashout;
+    const pWin = survivalProbability(target);
+    let refWins = 0;
 
     for (let d = 0; d < PASS2_DRAND_PER_SEED; d++) {
       const drandSeed = deterministicHex('pass2-drand-' + s, d, 48);
-      const cp = computeCrashPointFromBuffer(keyBuffer, drandSeed);
-
-      observed[binIndex(cp)]++;
-      if (cp >= 2.0) payout += 2.0;
+      if (computeCrashPointFromBuffer(keyBuffer, drandSeed) >= target) refWins++;
     }
 
-    const expected = expFracs.map(f => f * PASS2_DRAND_PER_SEED);
-    const chi2 = chiSquaredTest(observed, expected);
-    if (chi2.pValue < 0.01) chi2Fails++;
+    returnCents += refWins * Math.round(target * 100);
+    expectedReturn += PASS2_DRAND_PER_SEED * target * pWin;
+    returnVariance += PASS2_DRAND_PER_SEED * target * target * pWin * (1 - pWin);
 
-    totalRTP += payout / PASS2_DRAND_PER_SEED;
+    const captured = computeCrashPointFromBuffer(keyBuffer, round.result.drandRandomness);
+    if (captured !== round.result.crashPoint) capturedReplayMismatches++;
+    const capturedWon = captured >= target;
+    if (capturedWon) capturedWins++;
 
-    if ((s + 1) % 50 === 0 || s === seeds.length - 1) {
-      progressBar(s + 1, seeds.length, 'Pass 2', startTime);
+    // Captured value among the N+1 values (captured + reference): values are 0 (loss) or t (win), so
+    // the mid-rank of the captured one is (#below) + (#equal + 1)/2 counted over the other N values.
+    const n1 = PASS2_DRAND_PER_SEED + 1;
+    const losses = PASS2_DRAND_PER_SEED - refWins + (capturedWon ? 0 : 1);
+    const winsAll = n1 - losses;
+    const midLoss = (losses + 1) / 2;
+    const midWin = losses + (winsAll + 1) / 2;
+    const centre = (n1 + 1) / 2;
+    rankNumerator += (capturedWon ? midWin : midLoss) - centre;
+    rankDenominator += (losses * (midLoss - centre) * (midLoss - centre) + winsAll * (midWin - centre) * (midWin - centre)) / n1;
+
+    if ((s + 1) % 50 === 0 || s === rounds.length - 1) {
+      progressBar(s + 1, rounds.length, 'Pass 2', startTime);
     }
   }
-  progressBar(seeds.length, seeds.length, 'Pass 2', startTime);
+  progressBar(rounds.length, rounds.length, 'Pass 2', startTime);
   console.log('\n');
 
-  const meanCasinoRTP = totalRTP / seeds.length;
+  const returnZ = (returnCents / 100 - expectedReturn) / Math.sqrt(returnVariance);
+  const rankSumZ = rankNumerator / Math.sqrt(rankDenominator);
 
-  console.log(`  Chi-squared failures: ${chi2Fails}/${seeds.length}`);
-  console.log(`  Mean casino seed RTP @2x: ${(meanCasinoRTP * 100).toFixed(4)}%`);
+  console.log(`  Captured rounds reproduced: ${rounds.length - capturedReplayMismatches}/${rounds.length}`);
+  console.log(`  Return at played targets: ${(returnCents / 100).toFixed(2)} vs exact ${expectedReturn.toFixed(2)} — z ${returnZ.toFixed(3)}`);
+  console.log(`  Captured vs reference rank-sum z: ${rankSumZ.toFixed(3)}`);
 
   return {
-    seedsTested: seeds.length,
+    seedsTested: rounds.length,
     noncesPerSeed: PASS2_DRAND_PER_SEED,
-    chi2Fails,
-    meanCasinoRTP,
+    capturedReplayMismatches,
+    returnCents,
+    expectedReturn,
+    returnVariance,
+    returnZ,
+    capturedWins,
+    rankSumZ,
   };
 }
 
@@ -263,7 +306,8 @@ function writeConvergenceChart(convergenceData: { rounds: number; rtp: Record<nu
 <head>
 <meta charset="UTF-8">
 <title>DUEL.COM CRASH RTP CONVERGENCE \u2014 ${numTargets} TARGETS x ${(PASS1_ROUNDS_TOTAL / 1_000_000).toFixed(0)}M ROUNDS</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"><\/script>
+<!-- Chart.js 4.4.7 dist/chart.umd.js inlined verbatim from the npm package pinned in package-lock.json -->
+<script>${CHARTJS_SOURCE}<\/script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #fafafa; padding: 24px; }
@@ -343,9 +387,10 @@ new Chart(ctx, {
 </body>
 </html>`;
 
-  const outPath = path.join(__dirname, '../outputs/rtp-convergence.html');
+  fs.mkdirSync(EMIT_DIR, { recursive: true });
+  const outPath = path.join(EMIT_DIR, 'rtp-convergence.html');
   fs.writeFileSync(outPath, html);
-  console.log(`  \u2192 outputs/rtp-convergence.html written`);
+  console.log(`  \u2192 ${EMIT_LABEL}/rtp-convergence.html written`);
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
@@ -355,8 +400,7 @@ const pass2 = runPass2();
 
 writeConvergenceChart(pass1.convergenceData);
 
-const outputsDir = path.join(__dirname, '../outputs');
-if (!fs.existsSync(outputsDir)) fs.mkdirSync(outputsDir, { recursive: true });
+fs.mkdirSync(EMIT_DIR, { recursive: true });
 
 const output = {
   pass1_fresh_seeds: pass1,
@@ -364,7 +408,12 @@ const output = {
 };
 
 fs.writeFileSync(
-  path.join(outputsDir, 'simulation-results.json'),
+  path.join(EMIT_DIR, 'simulation-results.json'),
   JSON.stringify(output, null, 2) + '\n',
 );
-console.log(`\n  → outputs/simulation-results.json written\n`);
+console.log(`\n  → ${EMIT_LABEL}/simulation-results.json written`);
+if (PF_EMIT) {
+  console.log('  REPORT GENERATION (PF_EMIT=1): the committed artifacts in outputs/ were rewritten — re-pin them in src/artifact-pins.ts.\n');
+} else {
+  console.log('  Committed artifacts NOT modified (set PF_EMIT=1 to refresh them, then re-pin).\n');
+}

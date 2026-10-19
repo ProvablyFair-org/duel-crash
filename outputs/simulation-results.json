@@ -174,8 +174,13 @@
   },
   "pass2_casino_seeds": {
     "seedsTested": 1100,
-    "noncesPerSeed": 1000,
-    "chi2Fails": 14,
-    "meanCasinoRTP": 0.9996381818181804
+    "noncesPerSeed": 10000,
+    "capturedReplayMismatches": 0,
+    "returnCents": 1098999210,
+    "expectedReturn": 10988999.99781209,
+    "returnVariance": 12039947.990892963,
+    "returnZ": 0.2859197147905321,
+    "capturedWins": 671,
+    "rankSumZ": 0.16022327374176182
   }
 }

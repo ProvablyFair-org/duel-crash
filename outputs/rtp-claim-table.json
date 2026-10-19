@@ -1,0 +1,48 @@
+{
+  "package": "duel/crash",
+  "game": "crash",
+  "settingSpace": "every 0.01 cash-out target 1.01× – 100,000× (9,999,900 settings; rows = extremes + house-side rows up to 1000, buckets = per decade)",
+  "rtpMethod": "exact rational: count(x)·x/2^32, count by bisection on the operator per-value map (distribution RTP; the wallet credits the full amount × cashout on the 3 wins looked up, MANIFEST Money Model / DL-1)",
+  "rule": "RTP-CLAIM",
+  "ruleVersion": "1.2.0 (Methodology v1.1: places, per-setting, stake tiers, noted, published, RTP Figure Overstated; agreed 2026-10-14; 1.1.0 2026-10-01; 1.0.0 2026-09-29)",
+  "bandPp": "0.10",
+  "claim": {
+    "kind": "flat",
+    "rtp": "0.999",
+    "source": "fairness page: houseEdge = 0.001 in the code panel of the Verify tab on Duel's Provably Fair page (Provably Fair → Verify, game Crash; src/rng.ts:43, E16, pasted 2026-09-26), and effectiveEdge 0.1 served on all 1,100 rounds (Step 7; MANIFEST.md#payouts-and-rtp; declaration gameModel.edge.claimed 0.001)"
+  },
+  "settings": 9999900,
+  "trueMin": {
+    "setting": "cashout=99945.78",
+    "rtpExact": "214528619481/214748364800",
+    "rtpPct": "99.897673"
+  },
+  "trueMax": {
+    "setting": "cashout=1.03",
+    "rtpExact": "42906723287/42949672960",
+    "rtpPct": "99.900000"
+  },
+  "houseSideFailures": 0,
+  "playerFavourable": 0,
+  "worst": {
+    "setting": "cashout=99945.78",
+    "gapPp": "-0.002327"
+  },
+  "rangeChecks": [],
+  "outcome": "PASS",
+  "minimalFix": "none — the claim holds for every setting it states a figure for",
+  "unstated": 0,
+  "rowsComplete": false,
+  "buckets": [
+    {"bucket":"1.01× – <2.00×","settings":99,"minPct":"99.900000","maxPct":"99.900000","houseSideFailures":0,"playerFavourable":0},
+    {"bucket":"2.00× – <10.00×","settings":800,"minPct":"99.900000","maxPct":"99.900000","houseSideFailures":0,"playerFavourable":0},
+    {"bucket":"10.00× – <100.00×","settings":9000,"minPct":"99.899998","maxPct":"99.900000","houseSideFailures":0,"playerFavourable":0},
+    {"bucket":"100.00× – <1000.00×","settings":90000,"minPct":"99.899977","maxPct":"99.900000","houseSideFailures":0,"playerFavourable":0},
+    {"bucket":"1000.00× – <10000.00×","settings":900000,"minPct":"99.899768","maxPct":"99.900000","houseSideFailures":0,"playerFavourable":0},
+    {"bucket":"10000.00× – <100000.01×","settings":9000001,"minPct":"99.897673","maxPct":"99.900000","houseSideFailures":0,"playerFavourable":0}
+  ],
+  "rows": [
+    {"setting":"cashout=99945.78","rtpExact":"214528619481/214748364800","rtpPct":"99.897673","gapPp":"-0.002327","side":"within-band","outcome":"PASS"},
+    {"setting":"cashout=1.03","rtpExact":"42906723287/42949672960","rtpPct":"99.900000","gapPp":"0.000000","side":"within-band","outcome":"PASS"}
+  ]
+}

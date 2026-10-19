@@ -5,3 +5,12 @@ outputs/*.json
 !outputs/rtp-convergence.html
 !outputs/drand-api-verification.json
 .DS_Store
+
+# artifacts of record — the verifier scores a run against these; the simulation
+# artifact is pinned by SHA-256 in src/artifact-pins.ts (Step 17)
+!outputs/verification-results.json
+!outputs/simulation-results.json
+
+# run products — this verifier writes them fresh each run; the committed artifacts are pinned
+outputs/run/
+!outputs/rtp-claim-table.json

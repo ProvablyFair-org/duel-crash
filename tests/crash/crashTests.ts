@@ -97,13 +97,19 @@ describe('Survival Probability & RTP', () => {
   it('RTP for any target should be <= 0.999', () => {
     for (const target of [1.01, 1.5, 2, 5, 10, 50, 100, 1000]) {
       const rtp = expectedRTP(target);
-      assert.ok(rtp <= 0.9991, `RTP ${rtp} exceeds 0.999 for target ${target}`);
+      // Exact: survival × 2^32 is an integer count; count·cents·1000 ≤ 2^32·999·100 is RTP ≤ 0.999.
+      const count = BigInt(survivalProbability(target) * 2 ** 32);
+      const cents = BigInt(Math.round(target * 100));
+      assert.ok(count * cents * 1000n <= BigInt(2 ** 32) * 99900n, `RTP ${rtp} exceeds 0.999 for target ${target}`);
     }
   });
 
-  it('instant crash probability should be ~0.99%', () => {
+  it('instant crash probability is exactly 46,776,872 / 2^32 (1.0891%)', () => {
+    // P(crash = 1.00) = 1 − floor(2^32 × 0.999 / 1.01) / 2^32: the values v ≥ 4,248,190,424 floor to 1.00.
+    // Exact: the previous tolerance (|p − 0.0099| < 0.001) also accepted the 0.99% of a zero-edge game.
     const p = instantCrashProbability();
-    assert.ok(Math.abs(p - 0.0099) < 0.001, `expected ~0.99%, got ${(p * 100).toFixed(4)}%`);
+    assert.strictEqual(p * 2 ** 32, 46_776_872, `expected 46,776,872 / 2^32, got ${p * 2 ** 32} / 2^32`);
+    assert.strictEqual((p * 100).toFixed(4), '1.0891');
   });
 });
 
@@ -133,5 +139,55 @@ describe('Statistics', () => {
     const data = Array.from({ length: 1000 }, () => { x = (x * 1103515245 + 12345) & 0x7fffffff; return x / 0x7fffffff; });
     const { r } = lag1Autocorrelation(data);
     assert.ok(Math.abs(r) < 0.1, `expected near-zero autocorrelation, got ${r}`);
+  });
+});
+
+// ── The operator's own Verify-tab code (profile CRASH-09) ─────────────────────
+describe('Operator source — Duel\'s own Crash Verify-tab code, executed with only its inputs filled in (pasted 2026-09-26)', function () {
+  this.timeout(300_000);
+  // duel.com → Provably Fair → Verify (Crash) code panel, pasted by Paulo 2026-09-26, saved verbatim (src/operator-verifier.ts)
+  const { runOperatorVerifier, checkOperatorCites, operatorCents, OPERATOR_VERIFIER_PINS, OPERATOR_VERIFIER_FILE, OPERATOR_EXPECTED_LOGS } =
+    require('../../src/operator-verifier') as typeof import('../../src/operator-verifier');
+  const data = require('../../data/crash-master-1100rounds.json') as { rounds: Array<{ roundId: number; result: { serverSeed: string; drandRandomness: string; crashPoint: number } }> };
+  const VECTORS_FOR_OPERATOR = [
+    { serverSeed: '3c9c71aa9ffa2691d29fd754cb0caf8ce1fa87d57804196967de81088fab1d23', drand: 'b18fa6dc92304844fc4e868d708953e6b628b3f88d4381249d32264df1bfe5bc20aa0905e57fe54063010881767fd56d', expected: 2.81 },
+    { serverSeed: '502ff481ab3d23acbc4ee3b066e9db3e34995ebaea3f7b1a7dbeb17b7595ba56', drand: '84b7b0d89e1e5cfbdb4379dc023818061cccd55cf4ac868bcd07c6af9bc06d15ebc0a3c87f5564e05747c5f932cb1824', expected: 1.02 },
+  ];
+  const known = VECTORS_FOR_OPERATOR.map((v, i) => ({ id: `known${i}`, inputs: { drandSeed: v.drand, serverSeed: v.serverSeed } }));
+  const captured = data.rounds.map((r, i) => ({ id: `r${i}`, inputs: { drandSeed: r.result.drandRandomness, serverSeed: r.result.serverSeed } }));
+  const run = runOperatorVerifier([...known, ...captured]);
+
+  it('the vendored operator file and its runner hash to their pins, the code ran, and as shipped it printed only its empty-input message', () => {
+    assert.deepStrictEqual(run.files.map(f => f.match), [true, true]);
+    assert.strictEqual(run.files[0].file, OPERATOR_VERIFIER_FILE);
+    assert.strictEqual(run.files[0].actual, OPERATOR_VERIFIER_PINS[OPERATOR_VERIFIER_FILE]);
+    assert.strictEqual(run.error, null);
+    assert.deepStrictEqual(run.shippedLogs, [...OPERATOR_EXPECTED_LOGS]);
+  });
+
+  it('every operator line src/rng.ts cites carries the quoted text verbatim', () => {
+    const c = checkOperatorCites();
+    assert.deepStrictEqual(c.bad, []);
+    assert.ok(c.checked > 0);
+  });
+
+  it('fixed vectors: the operator code returns the unfloored src/rng.ts value and floors to the known crash point', () => {
+    VECTORS_FOR_OPERATOR.forEach((v, i) => {
+      const o = run.results!.get(`known${i}`)!;
+      assert.strictEqual(o.value, computeCrashPointRaw(v.serverSeed, v.drand));
+      assert.strictEqual(operatorCents(o.value), Math.round(v.expected * 100));
+      assert.deepStrictEqual(o.logs, [`Crash result: ${String(o.value)}`]);
+    });
+  });
+
+  it('every captured round: the operator value equals src/rng.ts computeCrashPointRaw and floors to the served crash point (1,100/1,100)', () => {
+    let agree = 0;
+    data.rounds.forEach((r, i) => {
+      const o = run.results!.get(`r${i}`)!;
+      if (o.value === computeCrashPointRaw(r.result.serverSeed, r.result.drandRandomness)
+        && operatorCents(o.value) === Math.round(r.result.crashPoint * 100)) agree++;
+    });
+    assert.strictEqual(data.rounds.length, 1100);
+    assert.strictEqual(agree, 1100);
   });
 });

@@ -15,12 +15,38 @@
  *   from the drand quicknet chain.
  * House edge: 0.1% (factor 0.999).
  * Nonce: always 0 — each round has its own unique server seed.
+ *
+ * OPERATOR SOURCE (since 2026-09-26): Duel's own Crash Verify-tab code, pasted by Paulo from duel.com
+ * Verify tab on 2026-09-26, evidence/verify-tab/duel-verify-tab-crash-2026-09-26.js (SHA-256
+ * c699cd54…5271d, pinned in src/operator-verifier.ts). "Lxx" is a line of that file. Every citation is
+ * listed in OPERATOR_SOURCE_CITES and checked against the pinned bytes by Step 5 and the unit tests, and
+ * Step 5 EXECUTES that file on every captured round. The file returns the UNFLOORED multiplier; the
+ * 2-dp floor below (computeCrashPoint) is not in the operator file — the served crash point is on
+ * that grid.
  */
 
 import * as crypto from 'crypto';
 
-const MAX_UINT32 = 2 ** 32;
-const HOUSE_EDGE = 0.001;
+/**
+ * Each entry: a line of evidence/verify-tab/duel-verify-tab-crash-2026-09-26.js and text that line must
+ * contain verbatim. src/operator-verifier.ts checkOperatorCites reads the pinned file and FAILs any entry
+ * whose line does not carry its text.
+ */
+export const OPERATOR_SOURCE_CITES: ReadonlyArray<{ line: number; text: string; ports: string }> = Object.freeze([
+  { line: 27, text: 'const keyBytes = hexToBytes(keyHex);', ports: 'HMAC key = hex-decoded server seed' },
+  { line: 33, text: "{ name: 'HMAC', hash: 'SHA-256' },", ports: 'HMAC-SHA256' },
+  { line: 46, text: "return new TextDecoder('utf-8').decode(bytes);", ports: 'drand hex → bytes → UTF-8 string (lossy, deterministic)' },
+  { line: 52, text: 'const NONCE = 0;', ports: 'nonce always 0' },
+  { line: 54, text: 'const message = new TextEncoder().encode(`${randomness}:${NONCE}`);', ports: 'message = randomness:0' },
+  { line: 60, text: 'const value = parseInt(hash.slice(0, 8), 16);', ports: 'first 4 bytes as uint32' },
+  { line: 62, text: 'const MAX = 2 ** 32;', ports: 'MAX_UINT32' },
+  { line: 63, text: 'const houseEdge = 0.001;', ports: 'HOUSE_EDGE' },
+  { line: 64, text: 'const result = (MAX / (value + 1)) * (1 - houseEdge);', ports: 'rawResult' },
+  { line: 66, text: 'return Math.max(1.0, result);', ports: 'floor at 1.0 (the 2-dp floor is not in the operator file)' },
+]);
+
+const MAX_UINT32 = 2 ** 32;   // operator L62
+const HOUSE_EDGE = 0.001;     // operator L63
 
 /**
  * Compute the crash point from a server seed and drand randomness.

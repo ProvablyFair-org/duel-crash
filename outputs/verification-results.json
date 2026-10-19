@@ -1,103 +1,825 @@
 {
   "verdict": "PROVABLY FAIR — Full Pass",
-  "scored": [
+  "steps": [
     {
       "step": 1,
       "name": "Seed Hash Integrity",
       "status": "PASS",
-      "detail": "1100/1100 hashes verified — SHA-256(serverSeed_bytes) === serverSeedHash"
+      "detail": "All 1100 commitments required by src/loader.ts opened and verified — SHA-256(serverSeed_bytes) === serverSeedHash; 0 rounds left unopened",
+      "data": {
+        "rounds": 1100,
+        "verified": 1100,
+        "broken": 0,
+        "unrevealed": 0,
+        "populationIssues": [],
+        "failures": []
+      },
+      "profileIds": [
+        "CRASH-01"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-01",
+          "coverage": "full",
+          "note": "per-round commitment design: every one of the 1,100 rounds opened — SHA-256(hex_decode(serverSeed)) = serverSeedHash — the count of commitments opened bound to EXPECTED_ROUNDS in src/loader.ts; an unopened commitment is counted and fails the step"
+        }
+      ]
     },
     {
       "step": 2,
-      "name": "drand Commitment Timing (Pre-Commitment)",
+      "name": "drand Bet Timing (Bet Before Beacon)",
       "status": "PASS",
-      "detail": "1100/1100 rounds — bet placed before drand published (min margin: 0.404s, mean: 12.196s, max: 13.779s; via authoritative transactions-API timestamp + drand chain formula)"
+      "detail": "All 1100 rounds required by src/loader.ts: the bet was accepted strictly before the drand beacon was published, every margin anchored to a server-side 'transactions-api' timestamp and the drand chain formula. Margins in this step's data block.",
+      "data": {
+        "roundsWithPositiveMargin": 1100,
+        "roundsWithoutPositiveMargin": 0,
+        "roundsWithServerTimestamp": 1100,
+        "precomputedMarginDisagreements": 0,
+        "minMarginSeconds": 0.404,
+        "meanMarginSeconds": 12.19583090909091,
+        "maxMarginSeconds": 13.779,
+        "populationIssues": [],
+        "failures": []
+      },
+      "profileIds": [
+        "CRASH-17"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-17",
+          "coverage": "partial",
+          "note": "commit-timing part. CRASH-17 is carried by four steps: Step 2 (every bet accepted strictly before its drand beacon was published — 1,100/1,100 margins positive, min 0.404 s — bound to the population, with the capture's stored margin cross-checked), Step 3 (beacon rounds strictly increasing, 1,099 transitions bound to the population: no beacon re-used or out of order), Step 11 (each beacon's publication time from the quicknet chain formula genesis + (round − 1) × 3, not a captured clock) and Step 15 (each round's drand signature bound to exactly one pinned api.drand.sh record for the same beacon round, the file's own counters recomputed). PARTIAL for one reason: the commit side of the margin is OPERATOR-REPORTED. betPlacedAt is Duel's own transactions-API timestamp_raw (a clock the operator controls), and it times the BET, not the moment the round's serverSeedHash was shown: the capture stores the hash from the crash_hashed_pf / crash_bet_placed / pending_drand socket events (capture/crash-capture.reference.js:153-195) with no receipt time, so that the commitment preceded the beacon is not measured from a clock the operator does not control. Disclosed as MANIFEST DL-2 and an ASSUMED premise; no step or verdict changed"
+        }
+      ]
     },
     {
       "step": 3,
       "name": "drand Round Monotonicity",
       "status": "PASS",
-      "detail": "1100 rounds — drand round IDs strictly increasing (monotonic — no replays or reordering)"
+      "detail": "All 1099 consecutive transitions required by src/loader.ts checked — drand round IDs strictly increasing, so no beacon was re-used or taken out of order. Whether each drand round was fixed before its beacon published is not recorded (MANIFEST DL-2); Step 14's rank statistic is the evidence against beacon selection",
+      "data": {
+        "compared": 1099,
+        "violations": 0,
+        "populationIssues": [],
+        "failures": []
+      },
+      "profileIds": [
+        "CRASH-17",
+        "CRASH-04"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-17",
+          "coverage": "partial",
+          "note": "beacon-order part. CRASH-17 is carried by four steps: Step 2 (every bet accepted strictly before its drand beacon was published — 1,100/1,100 margins positive, min 0.404 s — bound to the population, with the capture's stored margin cross-checked), Step 3 (beacon rounds strictly increasing, 1,099 transitions bound to the population: no beacon re-used or out of order), Step 11 (each beacon's publication time from the quicknet chain formula genesis + (round − 1) × 3, not a captured clock) and Step 15 (each round's drand signature bound to exactly one pinned api.drand.sh record for the same beacon round, the file's own counters recomputed). PARTIAL for one reason: the commit side of the margin is OPERATOR-REPORTED. betPlacedAt is Duel's own transactions-API timestamp_raw (a clock the operator controls), and it times the BET, not the moment the round's serverSeedHash was shown: the capture stores the hash from the crash_hashed_pf / crash_bet_placed / pending_drand socket events (capture/crash-capture.reference.js:153-195) with no receipt time, so that the commitment preceded the beacon is not measured from a clock the operator does not control. Disclosed as MANIFEST DL-2 and an ASSUMED premise; no step or verdict changed"
+        },
+        {
+          "id": "CRASH-04",
+          "coverage": "full",
+          "note": "the round-sequence key of this design is the drand beacon round: strictly increasing in capture order over EXPECTED_DRAND_TRANSITIONS = 1,099 transitions (a repeat or reorder fails); the declared constant nonce 0 is carried by every round's message, witnessed by Step 5's exact recomputation (the message is \"<drand>:0\")"
+        }
+      ]
     },
     {
       "step": 4,
       "name": "Server Seed Uniqueness",
       "status": "PASS",
-      "detail": "1100 unique seeds, 1100 unique hashes out of 1100 rounds"
+      "detail": "1100 distinct seeds and 1100 distinct commitment hashes, matching the population declared in src/loader.ts — one fresh commitment per round, no reuse",
+      "data": {
+        "distinctSeeds": 1100,
+        "distinctHashes": 1100,
+        "rounds": 1100,
+        "issues": []
+      },
+      "profileIds": [
+        "CRASH-03"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-03",
+          "coverage": "full",
+          "note": "per-round design: 1,100 distinct server seeds AND 1,100 distinct commitment hashes, both compared with EXPECTED_DISTINCT_SEEDS in src/loader.ts rather than with the array length — one commitment per round, none reused"
+        }
+      ]
     },
     {
       "step": 5,
       "name": "Outcome Recomputation",
       "status": "PASS",
-      "detail": "1100/1100 crash points recomputed — 100% parity"
+      "detail": "1100/1100 crash points recomputed (population of record in src/loader.ts) — 100% parity by exact equality with the recorded crash point; every recorded crash point is a whole number of hundredths at or above 1.00 (0 off the grid; the capture floored the served multiplier to 2 dp, so the grid half cannot fail on this dataset and does not show what the server sends); no cap is declared — the largest served crash point is 13664.99× and none exceeds the map maximum 4290672328.7× (v = 0). Player-verifier parity (CRASH-24): the ProvablyFair.org docs-site verifier (VerifyBets games/crash/derive.js + lib/hmac-sha256.js, origin/main @ bd4d59c, 2/2 SHA-256 pins MATCH) executed on 1100/1100 rounds: crash point equal to the served one and src/rng.ts on every round (0 / 0 differ). Live-site parity (CRASH-24): the deployed https://www.provablyfair.org/verify-bets bundle (3 chunks + runner, 4/4 SHA-256 pins MATCH) executed on 1100/1100 rounds: printed crash point equal to the served one and src/rng.ts on every round (0 / 0 differ, 0 off-grid), printed server-seed hash equal to the served commitment on every round (0 differ). Operator-code parity (CRASH-09): Duel's own Crash Verify-tab code (evidence/verify-tab/duel-verify-tab-crash-2026-09-26.js, pasted by Paulo from duel.com Verify tab 2026-09-26 (duel.com → Provably Fair → Verify, game Crash, code panel), SHA-256 c699cd5445fb3906…, pinned) executed with only its two \"User input values\" filled in (drandSeed = the captured drandRandomness hex, serverSeed) on 1100/1100 rounds: its unfloored result equals src/rng.ts computeCrashPointRaw as the same double on every round (0 differ) — the operator code's formula (2^32/(value+1))·(1−0.001), one 0.1 % on the crash point, is the formula the package recomputes; floor(x·100) equals the served crash point on every round (0 differ); printed = returned on 1100/1100; operator lines cited by src/rng.ts 10/10 verbatim. The code computes the crash point only; it says nothing about settlement (MANIFEST Money Model, DL-1)",
+      "data": {
+        "matched": 1100,
+        "mismatched": 0,
+        "required": 1100,
+        "servedOffGrid": 0,
+        "maxServedCrashPoint": 13664.99,
+        "mapMaximum": 4290672328.7,
+        "servedAboveMapMaximum": 0,
+        "siteVerifier": {
+          "files": [
+            {
+              "file": "games/crash/derive.js",
+              "pinnedSha256": "d6099cd7da6879a16eac08ea2efe20aea1f7b242cb3894cf1d8360a6da9aa833",
+              "vendoredSha256": "d6099cd7da6879a16eac08ea2efe20aea1f7b242cb3894cf1d8360a6da9aa833",
+              "match": true
+            },
+            {
+              "file": "lib/hmac-sha256.js",
+              "pinnedSha256": "bc30bfe9ef202905ece93de33440d41851abf16e910f90c2a567774a2b79d889",
+              "vendoredSha256": "bc30bfe9ef202905ece93de33440d41851abf16e910f90c2a567774a2b79d889",
+              "match": true
+            }
+          ],
+          "provenance": {
+            "siteRoot": "qa-workspace/duel/docusaurus/src/components/VerifyBets",
+            "repository": "mikepforg/pf-audit-duel",
+            "ref": "origin/main",
+            "head": "bd4d59cd9a3e75146f2575c5218a3fb9a8b2692d",
+            "headDate": "2026-09-19",
+            "deriveLastChanged": "4aaa1b267a6b86199c46f57db41058c7885067bb (2026-06-07)",
+            "readVia": "git cat-file -p origin/main:<path>",
+            "readOn": "2026-09-26"
+          },
+          "roundsExecuted": 1100,
+          "differsFromServed": 0,
+          "differsFromRng": 0,
+          "threw": 0,
+          "issues": []
+        },
+        "liveSiteVerifier": {
+          "files": [
+            {
+              "file": "chunks/turbopack-828b80f561e7c968.js",
+              "pinnedSha256": "6e8629f444df945f8fecfdfe05e24f4fa6c63b6b1ecc8f39fc45e9c4f4ecc903",
+              "vendoredSha256": "6e8629f444df945f8fecfdfe05e24f4fa6c63b6b1ecc8f39fc45e9c4f4ecc903",
+              "match": true
+            },
+            {
+              "file": "chunks/34934e0e762aa37e.js",
+              "pinnedSha256": "9fb319dec0d79f9bf5851ec8e0052b6b2125e603be03d12b78a0fe99eed817d1",
+              "vendoredSha256": "9fb319dec0d79f9bf5851ec8e0052b6b2125e603be03d12b78a0fe99eed817d1",
+              "match": true
+            },
+            {
+              "file": "chunks/4f34301b2f166201.js",
+              "pinnedSha256": "8111e3f3e9a137888558f69547a19b0238d1c50a339b4c51095f9481785df0f5",
+              "vendoredSha256": "8111e3f3e9a137888558f69547a19b0238d1c50a339b4c51095f9481785df0f5",
+              "match": true
+            },
+            {
+              "file": "run-live-verifier.cjs",
+              "pinnedSha256": "6f0709e6d749b189409faa1093e22a401df1fbbabb81d01140530750cf943f9a",
+              "vendoredSha256": "6f0709e6d749b189409faa1093e22a401df1fbbabb81d01140530750cf943f9a",
+              "match": true
+            }
+          ],
+          "provenance": {
+            "page": "https://www.provablyfair.org/verify-bets",
+            "chunkBase": "https://www.provablyfair.org/_next/static/chunks/",
+            "fetchedOn": "2026-09-25",
+            "copiedFrom": "pf-duel-workspace/games/dice/verifier-parity/live-site/chunks (2026-09-26)",
+            "pageSha256AtFetch": "ab20af5a6157c914e7d448a98d711851366f5a5f374335f45f0afbf852fddecd",
+            "pageEtagAtFetch": "\"q4121ltuup261t\"",
+            "deploymentId": "dpl_CxkerpJA9YjmxnP8qfA4d2jqFdti",
+            "pageModule": 7721
+          },
+          "roundsExecuted": 1100,
+          "differsFromServed": 0,
+          "differsFromRng": 0,
+          "offGrid": 0,
+          "seedHashDiffers": 0,
+          "missing": 0,
+          "standIns": 34,
+          "issues": []
+        },
+        "operatorVerifier": {
+          "files": [
+            {
+              "file": "evidence/verify-tab/duel-verify-tab-crash-2026-09-26.js",
+              "pinnedSha256": "c699cd5445fb3906614a51fda58d275c9ce1caa5c6402e412dfd20264f05271d",
+              "actualSha256": "c699cd5445fb3906614a51fda58d275c9ce1caa5c6402e412dfd20264f05271d",
+              "match": true
+            },
+            {
+              "file": "verifier-parity/operator/run-operator-verifier.cjs",
+              "pinnedSha256": "1d29adf63a96ee038af7314efe0173590a0dadceda66633bb6b9948253ff22e0",
+              "actualSha256": "1d29adf63a96ee038af7314efe0173590a0dadceda66633bb6b9948253ff22e0",
+              "match": true
+            }
+          ],
+          "provenance": {
+            "copiedBy": "Paulo",
+            "copiedOn": "2026-09-26",
+            "from": "pasted by Paulo from duel.com Verify tab 2026-09-26 (duel.com → Provably Fair → Verify, game Crash, code panel)",
+            "savedAs": "evidence/verify-tab/duel-verify-tab-crash-2026-09-26.js",
+            "sha256": "c699cd5445fb3906614a51fda58d275c9ce1caa5c6402e412dfd20264f05271d",
+            "bytes": 2336,
+            "lines": 76
+          },
+          "roundsExecuted": 1100,
+          "differsFromServed": 0,
+          "differsFromRngRaw": 0,
+          "printedEqualsReturned": 1100,
+          "errors": 0,
+          "citesChecked": 10,
+          "citesBad": 0,
+          "issues": []
+        }
+      },
+      "profileIds": [
+        "CRASH-07",
+        "CRASH-10",
+        "CRASH-14",
+        "CRASH-24"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-07",
+          "coverage": "full",
+          "note": "1,100/1,100 served crash points recomputed by exact equality (no tolerance) and the matched count bound to EXPECTED_ROUNDS — a skipped or shortened dataset fails"
+        },
+        {
+          "id": "CRASH-10",
+          "coverage": "partial",
+          "note": "grid-and-range part: every RECORDED crash point is asserted in its own right to be a whole number of hundredths at or above the declared floor 1.00 (integer hundredths via crashCents; 0 off-grid). PARTIAL: the capture stored floor(served multiplier × 100) / 100 (capture/crash-capture.reference.js:172), so the grid half cannot fail on a dataset that capture wrote and does not show whether the server sends 2-dp values; the floor half can fail (M05b). No cap is declared: the upper end is the map maximum (CRASH-14). The win rule and its boundary are Step 7; P(1.00) is Step 12"
+        },
+        {
+          "id": "CRASH-14",
+          "coverage": "partial",
+          "note": "cap half n/a WITH EVIDENCE (rule R2): Duel declares no cap; the step prints the largest served crash point (13,664.99×) and the map maximum at v = 0 (4,290,672,328.7×, from the independent per-value model) and fails a served value above it. PARTIAL: the target-bounds half has nothing to check against — Duel declares no minimum or maximum cash-out target in the package (declaration unknowns), so \"every target within the declared min/max\" is unestablished"
+        },
+        {
+          "id": "CRASH-24",
+          "coverage": "full",
+          "note": "HASH-MATCHED AND EXECUTED, two player verifiers (ported from Duel Dice 2026-09-26). (1) DOCS SITE: VerifyBets games/crash/derive.js + lib/hmac-sha256.js read with git cat-file from mikepforg/pf-audit-duel origin/main @ bd4d59c (derive.js last changed 4aaa1b2), vendored under verifier-parity/ with both SHA-256 pinned in src/site-verifier.ts (d6099cd7…, bc30bfe9…); Step 5 FAILs unless the copies hash to the pins, then runs the site's own deriveCrashSync on all 1,100 rounds (bound to EXPECTED_ROUNDS) and FAILs on any crash point that differs from the served one or src/rng.ts, as integer hundredths. (2) LIVE SITE: the three www.provablyfair.org/verify-bets chunks the Duel path needs (copied byte for byte from the Duel Dice package, which recorded them from GETs of 2026-09-25) plus a runner ported for Crash, all four pinned in src/live-site-verifier.ts; the site's own VERIFY → verifyDuelsGame → [CRASH] method is executed on all 1,100 rounds and its printed crash point must equal the served one and src/rng.ts and its printed server-seed hash the served commitment. scripts/check-site-verifier.mjs / check-live-site-verifier.mjs re-check a site checkout / the live deploy against the pins at release time (the --live GET was not run in this round). FAIL probed by the mutation battery (tests/mutations.json M05c–M05f)"
+        }
+      ]
     },
     {
       "step": 6,
       "name": "Bet-Size Invariance",
       "status": "PASS",
-      "detail": "100/100 Phase C ($10) rounds recompute identically — crash point is independent of bet amount"
+      "detail": "100/100 Phase C ($10) rounds recompute identically — crash point is independent of bet amount; Phase C is played at 2×, the same target 49 base-stake ($0.01) rounds play (plan in src/loader.ts), and all 49 elevated-stake and 24 base-stake wins settle at one identical per-unit return, exact on the 6-dp grid (0 differ)",
+      "data": {
+        "matched": 100,
+        "mismatched": 0,
+        "required": 100,
+        "phaseCStake": "10",
+        "phaseCTarget": 2,
+        "baseStake": "0.01",
+        "baseStakeRoundsAtTarget": 49,
+        "elevatedStakeWins": 49,
+        "baseStakeWins": 24,
+        "perUnitReturnDiffers": 0,
+        "offGridMoney": 0,
+        "planIssues": []
+      },
+      "profileIds": [
+        "CRASH-12"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-12",
+          "coverage": "full",
+          "note": "100/100 Phase C rounds recompute identically (floor ≥ 100 met); Phase C is played at the declared elevated stake $10 on the declared target 2×, the same target the declared 49 base-stake ($0.01) rounds play — plan in src/loader.ts, so stake is the only variable that moves; the 49 elevated-stake wins are counted and printed, and every elevated-stake and base-stake win settles at one identical per-unit return, compared as exact integer cross-products on the 6-dp grid (the two stakes against each other, no rule assumed)"
+        }
+      ]
     },
     {
       "step": 7,
-      "name": "Captured Payout Consistency (pre-rakeback display values)",
+      "name": "Payout Math",
       "status": "PASS",
-      "detail": "1100/1100 payouts verified — 1100/1100 isWin flags correct"
+      "detail": "671/671 won rounds: amountWon equals amount × cashout × (1 − 0.1%) exactly on the 6-dp grid, with the edge the declared constant, not the served field (0/671 equal amount × cashout); 1100/1100 served effectiveEdge fields equal the declared 0.1; 429/429 lost rounds record 0; 1100/1100 isWin flags equal crashPoint ≥ auto_cashout (population of record 1100); boundary witnessed in data: 4 tie(s) crash == target, 4 settled as a win; 4 round(s) one hundredth below the target, 4 settled as a loss",
+      "data": {
+        "wonRounds": 671,
+        "wonMatchDisplayFormula": 671,
+        "wonMatchAmountTimesCashout": 0,
+        "lostRounds": 429,
+        "lostZero": 429,
+        "isWinCorrect": 1100,
+        "declaredEdgePercent": 0.1,
+        "servedEdgeFieldDiffers": 0,
+        "offGrid": 0,
+        "boundaryTies": 4,
+        "boundaryTiesWon": 4,
+        "boundaryJustBelow": 4,
+        "boundaryJustBelowLost": 4
+      },
+      "profileIds": [
+        "CRASH-11",
+        "CRASH-10",
+        "CRASH-13"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-11",
+          "coverage": "partial",
+          "note": "what IS asserted: 671/671 wins satisfy amountWon = amount × cashout × (1 − 0.1 %) EXACTLY in integer 6-dp grid units (no float, no tolerance), 429/429 losses record 0, the multiplier is the cash-out target, and the count of wins equal to amount × cashout (0/671) is recorded. PARTIAL because the profile requires a settlement rule that is published or operator-sourced, not fitted to the rows it is checked against, and the field this step scores is not the settlement: amountWon as captured carries ×0.999, while the wallet ledger looked up on 2026-09-29 credits the full amount × cashout on 3/3 wins (evidence/wallet-legs-2026-09-29.json; MANIFEST Money Model, DL-1). The credited amount is witnessed on that sample, outside the dataset this step scores"
+        },
+        {
+          "id": "CRASH-10",
+          "coverage": "full",
+          "note": "win-rule part: isWin = (crashPoint ≥ auto_cashout) on 1,100/1,100 rounds, and the boundary is WITNESSED in the data and counted in the step — 4 ties (crash == target, all at 1.5×) settled as wins and 4 rounds one hundredth below the target settled as losses, which discriminates ≥ from >"
+        },
+        {
+          "id": "CRASH-13",
+          "coverage": "full",
+          "note": "the expected payout uses the DECLARED edge (src/loader.ts DECLARED_EDGE_PERCENT = 0.1) and the served effectiveEdge field is only COMPARED with it on every round (1,100/1,100 equal; a differing field fails the step) — until 2026-09-26 the step read effectiveEdge into the expected payout. The crash formula's 0.999 is a constant in src/rng.ts (Steps 5, 8, 12); the payout multiplier is the cash-out target. Origin declared as operator-config-and-capture (the served effectiveEdge + 1,100/1,100 recomputation); no Duel-published formula text is vendored in the package"
+        }
+      ]
     },
     {
       "step": 8,
-      "name": "Distribution Edge Audit (pre-rakeback)",
+      "name": "House Edge Audit",
       "status": "PASS",
-      "detail": "Instant crash P(1.00) = 1.0891% — RTP@2x = 99.9000%, RTP@10x = 99.9000%, RTP@100x = 99.9000% — distribution edge 0.1% confirmed (pre-rakeback; net player RTP within Zero Edge cap = 100.0%)"
+      "detail": "RTP computed from the uint32 threshold formula at 2×, 10× and 100× — every value at or below 0.999, decided in integer arithmetic, confirming the 0.1% house edge. Figures in this step's data block.",
+      "data": {
+        "rtpCeiling": 0.999,
+        "instantCrashProbability": 0.010891089215874672,
+        "rtpAt2x": 0.9989999998360872,
+        "rtpAt10x": 0.9989999979734421,
+        "rtpAt100x": 0.9989999933168292
+      },
+      "profileIds": [
+        "CRASH-19"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-19",
+          "coverage": "full",
+          "note": "spot part: RTP at 2×, 10× and 100× from the uint32 threshold, each at or below 0.999 decided in integers; the full two-sided enumeration over the 0.01 grid is Step 16"
+        }
+      ]
     },
     {
       "step": 9,
       "name": "Phase Coverage",
       "status": "PASS",
-      "detail": "Phase A: 800/800, Phase B: 200/200, Phase C: 100/100 — total 1100"
+      "detail": "1100 rounds across phases A, B and C exactly as declared in src/loader.ts (code constants, not the dataset header)",
+      "data": {
+        "phaseRounds": {
+          "A": 800,
+          "B": 200,
+          "C": 100
+        },
+        "totalRounds": 1100,
+        "populationIssues": []
+      },
+      "profileIds": [
+        "CRASH-05"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-05",
+          "coverage": "full",
+          "note": "rounds (1,100) and per-phase counts (A 800 / B 200 / C 100) against the code constants in src/loader.ts, not the dataset header; seeds (1,100) are bound by Steps 1 and 4 and the beacon transitions (1,099) by Step 3. No epoch size exists in this design: the crash form of the shape assertion is one commitment per round (Step 4)"
+        }
+      ]
     },
     {
       "step": 10,
       "name": "Dataset Hash",
       "status": "PASS",
-      "detail": "SHA-256 pre-flight check passed (verified before loading)"
+      "detail": "SHA-256 pre-flight check passed (verified before loading)",
+      "data": {
+        "expected": "ea62337a8665842ad33341a7d1b435d0c986f9feb3b03609cb0b0c868f3ef58a",
+        "actual": "ea62337a8665842ad33341a7d1b435d0c986f9feb3b03609cb0b0c868f3ef58a",
+        "match": true
+      },
+      "profileIds": [
+        "CRASH-26"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-26",
+          "coverage": "full",
+          "note": "the dataset SHA-256 equals the pin in src/loader.ts, checked in the tests/verify.ts pre-flight (process exits 1 before any step runs; the pin cannot be emptied — fail-open removed) and recorded here. The game has no separate config file the derivation reads"
+        }
+      ]
     },
     {
       "step": 11,
       "name": "drand Chain Formula",
       "status": "PASS",
-      "detail": "1100/1100 drandPublishedAt values match quicknet formula (genesis + (round-1) × 3s)"
+      "detail": "All 1100 rounds required by src/loader.ts: drandPublishedAt equals the quicknet chain formula, genesis + (round − 1) × 3s",
+      "data": {
+        "matched": 1100,
+        "mismatched": 0,
+        "populationIssues": [],
+        "failures": []
+      },
+      "profileIds": [
+        "CRASH-17"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-17",
+          "coverage": "partial",
+          "note": "publication-time part. CRASH-17 is carried by four steps: Step 2 (every bet accepted strictly before its drand beacon was published — 1,100/1,100 margins positive, min 0.404 s — bound to the population, with the capture's stored margin cross-checked), Step 3 (beacon rounds strictly increasing, 1,099 transitions bound to the population: no beacon re-used or out of order), Step 11 (each beacon's publication time from the quicknet chain formula genesis + (round − 1) × 3, not a captured clock) and Step 15 (each round's drand signature bound to exactly one pinned api.drand.sh record for the same beacon round, the file's own counters recomputed). PARTIAL for one reason: the commit side of the margin is OPERATOR-REPORTED. betPlacedAt is Duel's own transactions-API timestamp_raw (a clock the operator controls), and it times the BET, not the moment the round's serverSeedHash was shown: the capture stores the hash from the crash_hashed_pf / crash_bet_placed / pending_drand socket events (capture/crash-capture.reference.js:153-195) with no receipt time, so that the commitment preceded the beacon is not measured from a clock the operator does not control. Disclosed as MANIFEST DL-2 and an ASSUMED premise; no step or verdict changed"
+        }
+      ]
     },
     {
       "step": 12,
-      "name": "Anti-Circularity (distribution edge, pre-rakeback)",
+      "name": "Anti-Circularity",
       "status": "PASS",
-      "detail": "Distribution RTP independently computed from uint32 threshold formula for 11 targets — all ≤ 99.9% (pre-rakeback). Samples: 1.01x: 99.900000%, 1.1x: 99.900000%, 1.5x: 99.900000%, 2x: 99.900000%"
+      "detail": "Independent per-value model reproduces 1100/1100 live crash points; at 11 cash-out targets the uint32 values reaching each target were counted from that model and equal src/rng.ts's survival × 2^32 exactly (0 mismatches), and every counted RTP is at or below 0.999 in integer arithmetic (0 above); the instant-crash probability counted from the model equals src/rng.ts exactly. Negative controls: 1100/1100 live crash points moved by 0.01 rejected, and a map mis-wired to edge factor 0.998 disagrees with src/rng.ts at 11/11 targets. Per-target counts and P(1.00) in this step's data block.",
+      "data": {
+        "targetsTested": 11,
+        "liveRoundsReproduced": 1100,
+        "instantCrashCount": 46776872,
+        "instantCrashProbability": 0.010891089215874672,
+        "negativeControlCorruptAccepted": 0,
+        "negativeControlWrongMapTargetsCaught": 11,
+        "countMismatches": 0,
+        "aboveCeiling": 0,
+        "rtpCeiling": 0.999,
+        "perTarget": {
+          "1.01x": {
+            "counted": 4248190424,
+            "rngCount": 4248190424,
+            "rtp": 0.9989999998919666,
+            "shortfall": 1.0803341865539551e-10
+          },
+          "1.1x": {
+            "counted": 3900611207,
+            "rngCount": 3900611207,
+            "rtp": 0.9989999997662381,
+            "shortfall": 2.337619662284851e-10
+          },
+          "1.5x": {
+            "counted": 2860448219,
+            "rngCount": 2860448219,
+            "rtp": 0.9989999999525025,
+            "shortfall": 4.74974513053894e-11
+          },
+          "2x": {
+            "counted": 2145336164,
+            "rngCount": 2145336164,
+            "rtp": 0.9989999998360872,
+            "shortfall": 1.639127731323242e-10
+          },
+          "3x": {
+            "counted": 1430224109,
+            "rngCount": 1430224109,
+            "rtp": 0.9989999996032566,
+            "shortfall": 3.9674341678619384e-10
+          },
+          "5x": {
+            "counted": 858134465,
+            "rngCount": 858134465,
+            "rtp": 0.9989999991375953,
+            "shortfall": 8.624047040939331e-10
+          },
+          "10x": {
+            "counted": 429067232,
+            "rngCount": 429067232,
+            "rtp": 0.9989999979734421,
+            "shortfall": 2.0265579223632814e-9
+          },
+          "20x": {
+            "counted": 214533616,
+            "rngCount": 214533616,
+            "rtp": 0.9989999979734421,
+            "shortfall": 2.0265579223632814e-9
+          },
+          "50x": {
+            "counted": 85813446,
+            "rngCount": 85813446,
+            "rtp": 0.9989999933168292,
+            "shortfall": 6.683170795440674e-9
+          },
+          "100x": {
+            "counted": 42906723,
+            "rngCount": 42906723,
+            "rtp": 0.9989999933168292,
+            "shortfall": 6.683170795440674e-9
+          },
+          "1000x": {
+            "counted": 4290672,
+            "rngCount": 4290672,
+            "rtp": 0.9989999234676361,
+            "shortfall": 7.653236389160156e-8
+          }
+        },
+        "failures": []
+      },
+      "profileIds": [
+        "CRASH-18",
+        "CRASH-10"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-18",
+          "coverage": "full",
+          "note": "an independent per-value model (tests/steps/crash-model.ts — not the closed form) is bound to all 1,100 live rounds by its own HMAC, then the uint32 values reaching each of 11 targets are COUNTED from it and must equal src/rng.ts's survival × 2^32 exactly; no operator probability field exists or is read; NEGATIVE CONTROLS: every live crash point moved by 0.01 is rejected by the binding predicate, and the same counting run on a map mis-wired to edge factor 0.998 disagrees with src/rng.ts (11/11 targets) — both comparisons shown able to fail"
+        },
+        {
+          "id": "CRASH-10",
+          "coverage": "full",
+          "note": "instant-crash part: P(crash = 1.00) = 1 − count(1.01)/2^32 counted from the independent model, equal to src/rng.ts instantCrashProbability() exactly, printed in the step data"
+        }
+      ]
     },
     {
       "step": 13,
       "name": "Simulation Pass 1",
       "status": "PASS",
-      "detail": "5,000,000 rounds (10 streams × 500,000) — Fisher's combined: p=0.5382 (0/10 streams below α=0.01) | lag1Z=-0.029, runsP=0.0436 | @1.5×=99.8863%, @2×=99.8643%, @5×=99.8948%, @10×=99.9334%, @50×=99.7810%"
+      "detail": "5,000,000 rounds (10 streams × 500,000) REPLAYED from their HMAC seeds and every committed scalar reproduced — Fisher's combined p at or above α=0.01, 0/10 individual streams below α=0.01, |lag-1 z| below 3, runs p at or above 0.01, and simulated RTP within 5σ of the formula at all 5 targets. Statistics in this step's data block.",
+      "data": {
+        "replayed": true,
+        "totalRounds": 5000000,
+        "streams": 10,
+        "roundsPerStream": 500000,
+        "alpha": 0.01,
+        "lag1ZBound": 3,
+        "rtpSigmaBound": 5,
+        "fisherCombinedP": 0.5382059357146423,
+        "fisherCombinedStatistic": 18.74877191662577,
+        "fisherCombinedDf": 20,
+        "streamsBelowAlpha": 0,
+        "lag1R": -0.000013050999436970077,
+        "lag1Z": -0.029182921915376577,
+        "runsP": 0.04362903860011347,
+        "simulatedRTP": 0.9986432,
+        "perTargetRTP": {
+          "2": 0.9986432,
+          "5": 0.998948,
+          "10": 0.999334,
+          "50": 0.99781,
+          "1.5": 0.9988629
+        },
+        "perTargetRtpZ": {
+          "2": -0.7978290867667005,
+          "5": -0.05815862408351059,
+          "10": 0.2490611445209743,
+          "50": -0.3803157491855123,
+          "1.5": -0.4333319382846519
+        },
+        "theoreticalMaxRTP": 0.999,
+        "committedFieldsNotReproduced": []
+      },
+      "profileIds": [
+        "CRASH-20"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-20",
+          "coverage": "full",
+          "note": "5,000,000 rounds (10 streams × 500,000) on HMAC-derived pinned seeds, REPLAYED in verify from those seeds — per-stream chi-squared against the exact survival law combined by Fisher, lag-1 and runs, simulated RTP within 5σ of the formula at 5 targets (1.5×–50×); every committed scalar compared with the replay (integers exact, floats at the reproduction tolerance) and the verdict taken from the replay; the artifact is pinned (Step 17) and carries no run metadata"
+        }
+      ]
     },
     {
       "step": 14,
       "name": "Simulation Pass 2 (Casino Seeds)",
       "status": "PASS",
-      "detail": "1100 casino seeds × 1000 random drand values — 14 chi-squared failures (expected ≤21 under H₀) | meanRTP=99.9638%"
+      "detail": "1100/1100 revealed seeds × 10,000 reference drand values REPLAYED at the cash-out target each round was actually played at, and all 1100 captured rounds reproduced from their real beacon; every committed scalar reproduced. Pre-registered rule: FAIL if (1) the unit-stake return of the played targets, standardised by its EXACT mean Σ N·t·p(t) and variance Σ N·t²·p(1−p), or (2) the rank-sum of each captured round among its own seed's 10,000 reference draws (exact permutation null: the captured beacon is exchangeable with the reference under no cherry-pick), falls below z = -3.291 (one-sided α 0.0005 each, family 0.001, Bonferroni). Neither does; both z and the direction split are in this step's data block. Detection power (≥ 50 %, printed rounded; exact in the data block): the rank rule detects an operator who turns ≥ 7.5 % of would-be winning captured rounds into losses; the return rule detects a ≥ 0.10 % relative RTP shortfall across the seed population at the targets played.",
+      "data": {
+        "replayed": true,
+        "seedsTested": 1100,
+        "seedsRequired": 1100,
+        "noncesPerSeed": 10000,
+        "capturedReplayMismatches": 0,
+        "familyAlpha": 0.001,
+        "alphaEach": 0.0005,
+        "zCritical": -3.2905267314919255,
+        "returnObserved": 10989992.1,
+        "returnExpected": 10988999.99781209,
+        "returnZ": 0.2859197147905321,
+        "returnRTP": 0.9990901909090909,
+        "expectedRTP": 0.9989999998010991,
+        "rankSumZ": 0.16022327374176182,
+        "capturedWins": 671,
+        "capturedExpectedWins": 668.5277726601344,
+        "capturedBelowMedian": 429,
+        "capturedAboveMedian": 671,
+        "powerRankLossFraction": 0.07495837462473369,
+        "powerReturnShortfall": 0.0010390095883790681,
+        "committedFieldsNotReproduced": []
+      },
+      "profileIds": [
+        "CRASH-21"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-21",
+          "coverage": "full",
+          "note": "all 1,100 revealed server seeds × 10,000 drand values each (the profile floor), REPLAYED in verify at the cash-out target each round was actually played at, and every captured round recomputed from its revealed seed and real beacon (1,100/1,100 reproduce the served crash point). Pre-registered rule (tests/steps/sim-replay.ts, 2026-09-26): FAIL if (1) the unit-stake return of the played targets against its EXACT mean Σ N·t·p(t) and variance Σ N·t²·p(1−p) (p = src/rng.ts survivalProbability, proven equal to the uint32 count by Step 12), or (2) the rank-sum of each captured round among its own seed's 10,000 reference draws — an EXACT permutation null, the captured beacon being exchangeable with the reference under no cherry-pick — is below z = −3.291 (one-sided α 0.0005 each, family 0.001). Measured: return z 0.286, rank-sum z 0.160. Detection power printed (≥ 50 %): turning ≥ 7.5 % of would-be winning captured rounds into losses, or a ≥ 0.10 % relative RTP shortfall. Committed scalars compared with the replay. Replaced the chi-squared fail count (MANIFEST DL-3, resolved)"
+        }
+      ]
     },
     {
       "step": 15,
       "name": "drand API Signature Verification",
       "status": "PASS",
-      "detail": "1100/1100 drand signatures matched byte-for-byte against api.drand.sh (chain: quicknet) — 0 failures"
+      "detail": "1100/1100 dataset rounds each have exactly one api.drand.sh record (chain: quicknet) for the same beacon round, and the API signature recorded there equals the dataset signature — recomputed per record, not re-fetched (no network in verify); the file's own counters agree",
+      "data": {
+        "required": 1100,
+        "verified": 1100,
+        "bound": 1100,
+        "strays": 0,
+        "countersAgree": true,
+        "chainIsQuicknet": true,
+        "fileCounters": {
+          "total": 1100,
+          "passed": 1100,
+          "failed": 0
+        }
+      },
+      "profileIds": [
+        "CRASH-17"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-17",
+          "coverage": "partial",
+          "note": "source-binding part. CRASH-17 is carried by four steps: Step 2 (every bet accepted strictly before its drand beacon was published — 1,100/1,100 margins positive, min 0.404 s — bound to the population, with the capture's stored margin cross-checked), Step 3 (beacon rounds strictly increasing, 1,099 transitions bound to the population: no beacon re-used or out of order), Step 11 (each beacon's publication time from the quicknet chain formula genesis + (round − 1) × 3, not a captured clock) and Step 15 (each round's drand signature bound to exactly one pinned api.drand.sh record for the same beacon round, the file's own counters recomputed). PARTIAL for one reason: the commit side of the margin is OPERATOR-REPORTED. betPlacedAt is Duel's own transactions-API timestamp_raw (a clock the operator controls), and it times the BET, not the moment the round's serverSeedHash was shown: the capture stores the hash from the crash_hashed_pf / crash_bet_placed / pending_drand socket events (capture/crash-capture.reference.js:153-195) with no receipt time, so that the commitment preceded the beacon is not measured from a clock the operator does not control. Disclosed as MANIFEST DL-2 and an ASSUMED premise; no step or verdict changed"
+        }
+      ]
     },
     {
       "step": 16,
+      "name": "Configuration Coverage (auto-cash-out target)",
+      "status": "PASS",
+      "detail": "All 5 declared cash-out targets carry at least the 45-round floor from src/loader.ts, and no undeclared target appears in the data. Targets outside the captured set carry no unverified return: at all 9999900 cash-out points of the 0.01 grid from 1.01× to 100000× (bound stated in src/loader.ts RTP_GRID_MAX; beyond it not enumerated) the counted theoretical RTP is at 0.999 to within one uint32 value's worth (≤ 100000/2^32), 0 above the ceiling and 0 below it by a whole value; a shortfall is not scored here: each grid point is a row of the RTP table, held to the claim by RTP-CLAIM on this step. Per-target counts in this step's data block.",
+      "data": {
+        "declaredTargets": [
+          1.1,
+          1.5,
+          2,
+          5,
+          10
+        ],
+        "minRoundsPerTarget": 45,
+        "roundsPerTarget": {
+          "2": 149,
+          "5": 50,
+          "10": 50,
+          "1.5": 800,
+          "1.1": 51
+        },
+        "undeclaredTargetsPresent": [],
+        "rtpGridPoints": 9999900,
+        "rtpGridMax": 100000,
+        "rtpCeiling": 0.999,
+        "flatnessBound": "per target: 0 <= 0.999 - RTP < x / 2^32 (one uint32 value), decided in integers; above the ceiling fails, a shortfall is reported and scored by RTP-CLAIM",
+        "largestQuantum": 0.000023283064365386963,
+        "aboveCeiling": 0,
+        "belowByQuantum": 0,
+        "maxRtpShortfall": 0.000023268881253898144,
+        "worstTarget": 99945.78,
+        "unverifiedRTPShare": 0,
+        "note": "Theoretical RTP sits at the house ceiling, to within one uint32 value, at every cash-out target of the enumerated grid (1.01× to 100000×), so a target in that range the capture never exercised carries no unverified return — only no live observation of it. Above the grid it is not enumerated here, and the floor in the 2^32 count lowers it at some targets (MANIFEST.md#distribution-rtp, DL-5).",
+        "failures": []
+      },
+      "profileIds": [
+        "CRASH-15",
+        "CRASH-08",
+        "CRASH-19"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-15",
+          "coverage": "full",
+          "note": "all 5 declared cash-out targets (src/loader.ts EXPECTED_CASHOUT_TARGETS) held to the 45-round floor, an undeclared target in the data fails, and the claim that never-played targets carry no unverified return rests on the exact enumeration below, not on prose"
+        },
+        {
+          "id": "CRASH-08",
+          "coverage": "full",
+          "note": "the draw is monotone in one uint32; at EVERY 0.01 cash-out point from 1.01× to 100,000× (9,999,900 points; bound and its reason stated in src/loader.ts RTP_GRID_MAX — Duel declares no maximum target and no cap) the uint32 values reaching it are counted from the independent model and 0 ≤ 0.999 − RTP < x/2^32 is decided in integers, i.e. the survival probability is within one uint32 value (2^-32) of 0.999/x; 0 above, 0 below by a whole value. Beyond 100,000× the claim is not enumerated"
+        },
+        {
+          "id": "CRASH-19",
+          "coverage": "full",
+          "note": "the per-target effective edge over the same 9,999,900-point grid, both sides of the claimed 0.1 %, exact; the distribution RTP only — settlement and the Zero Edge rakeback are stated separately in MANIFEST Money Model (the full amount × cashout credited on the 3 wins looked up, DL-1)"
+        }
+      ]
+    },
+    {
+      "step": 17,
       "name": "Artifact Integrity (pinned artifacts of record)",
       "status": "PASS",
-      "detail": "3 artifact(s) checked against src/artifact-pins.ts; drand-api-verification.json matches its pin; rtp-convergence.html matches its pin; simulation-results.json matches its pin"
+      "detail": "3 artifact(s) checked against src/artifact-pins.ts; drand-api-verification.json matches its pin; rtp-convergence.html matches its pin; simulation-results.json matches its pin; every one of the 2317 numeric leaves of the committed JSON artifacts lies in its declared value domain (src/domains.ts) and none is undeclared",
+      "data": {
+        "pinned": 3,
+        "mismatched": 0,
+        "artifacts": {
+          "drand-api-verification.json": {
+            "expected": "6de7a635b429b9412de25999e1501a3ad8209a23cbdd0830ea89656df3c48d1c",
+            "actual": "6de7a635b429b9412de25999e1501a3ad8209a23cbdd0830ea89656df3c48d1c",
+            "match": true
+          },
+          "rtp-convergence.html": {
+            "expected": "ea242a6bf421341beb0096f37edfaa962e5b377cb3090a3600d9cb10380e261b",
+            "actual": "ea242a6bf421341beb0096f37edfaa962e5b377cb3090a3600d9cb10380e261b",
+            "match": true
+          },
+          "simulation-results.json": {
+            "expected": "d78d38a7e2e98da89dd0781bfd03dba459049d0ebcf94e1614c9b48afff9d555",
+            "actual": "d78d38a7e2e98da89dd0781bfd03dba459049d0ebcf94e1614c9b48afff9d555",
+            "match": true
+          }
+        },
+        "domainLeavesChecked": 2317,
+        "domainProblems": []
+      },
+      "profileIds": [
+        "CRASH-27"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-27",
+          "coverage": "full",
+          "note": "the three artifacts of record (drand-api-verification.json, rtp-convergence.html, simulation-results.json) match their SHA-256 pins in src/artifact-pins.ts (absent or altered = FAIL), each is un-ignored by name in .gitignore, none carries run metadata, verify writes only to outputs/run/ unless PF_EMIT=1, the derived statistics are held at the reproduction tolerance (tests/verify.ts diff, Steps 13–14 replay), and — added 2026-09-26, ported from Duel Dice — every numeric leaf of the two committed JSON artifacts is validated against a value domain in src/domains.ts (bounds from src/loader.ts and the simulation plan, never from the artifact) in both directions: inside its domain, and covered by a rule. FAIL probed (M17c: an impossible χ² fail count written and re-pinned)"
+        }
+      ]
+    },
+    {
+      "step": 18,
+      "name": "Live-Sample Fit (informational)",
+      "status": "PASS",
+      "detail": "the 1100 live rounds' recomputed leading uint32 values fit uniform on 20 equal bins (χ² p ≥ 0.01) and show no serial dependence in capture order (|lag-1 z| < 3, runs p ≥ 0.01); informational — the distribution is proven by Steps 5 and 13. Statistics in this step's data block.",
+      "data": {
+        "n": 1100,
+        "bins": 20,
+        "alpha": 0.01,
+        "chi2": 13.200000000000001,
+        "df": 19,
+        "chi2P": 0.8281768906911239,
+        "lag1R": -0.02262162447580379,
+        "lag1Z": -0.7502744053456133,
+        "runsZ": 0.7239566725884878,
+        "runsP": 0.46909219662307944
+      },
+      "profileIds": [
+        "CRASH-22"
+      ],
+      "profileChecks": [
+        {
+          "id": "CRASH-22",
+          "coverage": "full",
+          "note": "the 1,100 live rounds' recomputed leading uint32 values are fitted to uniform (χ², 20 bins) and tested for serial dependence in capture order (lag-1 z, runs); a deviation turns the step to INFO — informational (profile policy INFORMATIONAL, Mike 2026-09-29): reported, never counted as a flag, never a FAIL, verdict unchanged. Probed as an INFO (M18: the sample sorted before the test)"
+        }
+      ]
     }
   ],
+  "profileCoverage": {
+    "game": "crash",
+    "profileVersion": "1.0.3",
+    "notApplicable": [
+      {
+        "id": "CRASH-02",
+        "reason": "applies = { commitment.chain.present, eq: true }; declared false — Duel Crash commits one fresh server seed per round: the dataset carries no chain-position or terminal field, and the 1,100 rounds carry 1,100 distinct seeds and 1,100 distinct commitments (Step 4). There is no chain to link or fold"
+      },
+      {
+        "id": "CRASH-06",
+        "reason": "applies = { rng.clientSeed.inMessage, eq: true }; declared false — Crash is multiplayer, the message is \"<utf8(hex_decode(drandRandomness))>:0\" with no client seed, the dataset carries no client-seed field, and all 1,100 rounds recompute from that message (Step 5)"
+      },
+      {
+        "id": "CRASH-16",
+        "reason": "applies = { money.balanceField, notNull: true }; declared null — no round record carries a balance, balance delta or wallet-credit field (MANIFEST Money Model lists the fields). Wallet legs for six captured bets were looked up separately on 2026-09-29 (evidence/wallet-legs-*.json, DL-1) and are not part of the dataset of record"
+      }
+    ],
+    "packageChecks": [
+      {
+        "id": "CRASH-09",
+        "artifact": "tests/crash/crashTests.ts (Operator source block) + src/rng.ts OPERATOR_SOURCE_CITES + src/operator-verifier.ts + Step 5",
+        "coverage": "full",
+        "note": "CLOSED 2026-09-26 (was partial: Duel's crash Verify code had not been copied, MANIFEST DL-4). Duel's own Crash Verify-tab code, pasted by Paulo from duel.com Verify tab 2026-09-26, is vendored verbatim at evidence/verify-tab/duel-verify-tab-crash-2026-09-26.js (E16, SHA-256 c699cd54…, never edited) and pinned with its runner in src/operator-verifier.ts. The asserts, each met: (1) \"unit tests reproduce at least one captured round … against the operator's published algorithm\" — the Operator source block in tests/crash/crashTests.ts EXECUTES the pinned file with only its two \"User input values\" filled in (drandSeed = the captured drandRandomness hex, serverSeed) on all 1,100 captured rounds: its unfloored result equals src/rng.ts computeCrashPointRaw as the same double and floor(x·100) equals the served crash point on 1,100/1,100; (2) \"fixed vectors\" — two known rounds (2.81, 1.02) through the same file; (3) \"the adapter cites the operator source line it ports\" — src/rng.ts OPERATOR_SOURCE_CITES names 10 lines of the pinned file, each checked verbatim (10/10). Step 5 runs the same execution in the verifier. The operator code applies one 0.1 % (houseEdge 0.001, L63) to the crash point — the formula the package recomputes; it says nothing about settlement (MANIFEST Money Model, DL-1). FAIL probed: M05g (a line of the file changed AND re-pinned), M05h (file byte, no re-pin), M05i (runner byte, no re-pin), M05j (runner forged AND re-pinned), M05k (a citation moved). Not established: that the Verify button, or Duel's server, runs exactly this code"
+      },
+      {
+        "id": "CRASH-23",
+        "artifact": "MANIFEST.md#verification-results",
+        "coverage": "full",
+        "note": "MANIFEST Verification results carries the standardized matrix between the S5-MATRIX:START/END markers with the framework IDs S5-1 … S5-8: six rows Pass (S5-1, S5-3, S5-4, S5-6, S5-7, S5-8) and two Not applicable — disclosed (S5-2, S5-5), each tied to a scored step or the capture; the package's own S1–S10 categories follow it unchanged"
+      },
+      {
+        "id": "CRASH-25",
+        "artifact": "MANIFEST.md#verify-a-bet + README.md pointer",
+        "coverage": "full",
+        "note": "an ordered five-step paste path in the dataset's and the Provably Fair panel's field names: where the seed and the beacon are revealed, the commitment encoding SHA-256(hex_decode(serverSeed)) = serverSeedHash, the beacon check (quicknet round, publication time from the chain formula after the bet), the crash-point formula with its 2-dp floor, 1.00 floor and no cap, and the cash-out rule crash ≥ target with the tie witnessed"
+      },
+      {
+        "id": "CRASH-28",
+        "artifact": "package.json + tests/verify.ts + src/simulate.ts",
+        "coverage": "full",
+        "note": "npm test = mocha + verify (no simulate) and writes only to outputs/run/; npm run test:full regenerates the simulation into outputs/run/ and verify field-diffs it against the pinned artifact at 1e-14 abs + 1e-12 rel, recording the diff and the runtime in outputs/run/diff.json (added 2026-09-26); engines Node 22.x + .nvmrc; audit ID PF-2026-DL05 assigned; step counts in README / MANIFEST / tests/verify.ts equal the suite (18); the fresh-clone run of 2026-09-26 is recorded in MANIFEST.md#reproduce-the-audit"
+      },
+      {
+        "id": "CRASH-29",
+        "artifact": "tests/mutations.json + scripts/mutate.mjs",
+        "coverage": "full",
+        "note": "a step-named mutation registry runs in a disposable copy via `npm run mutate`; every scored step has at least one mutation that kills it (the runner reads the scored steps from its own baseline run), each entry carries an `expect` marker so the intended step fires, and re-pin forgeries are included (dataset and artifact re-pinned after the edit; added 2026-09-26: Duel's Verify-tab code and its runner forged AND re-pinned, M05g and M05j, with M05h, M05i and M05k). No declared survivors"
+      },
+      {
+        "id": "CRASH-30",
+        "artifact": "MANIFEST.md#limitations-and-trust + MANIFEST.md#evidence",
+        "coverage": "full",
+        "note": "MANIFEST.md carries the declared-limitations register (DL-1 …) with measured magnitude and closure evidence, and the Load-Bearing Premises table with the \"could the captured data contradict it?\" column and ASSUMED markers; MANIFEST Evidence numbers every exhibit from E01; no internal QA material ships in the package"
+      }
+    ]
+  },
   "informational": [
     {
       "label": "Instant crash rate",
@@ -105,23 +827,23 @@
     },
     {
       "label": "Live RTP @ 1.1x (n=51)",
-      "detail": "94.81% — pre-rakeback display values (see MANIFEST §Money Model); small-n variance — informational only (simulation is authoritative)"
+      "detail": "94.81% — informational only (simulation is authoritative)"
     },
     {
       "label": "Live RTP @ 1.5x (n=800)",
-      "detail": "101.71% — pre-rakeback display values (see MANIFEST §Money Model); small-n variance — informational only (simulation is authoritative)"
+      "detail": "101.71% — informational only (simulation is authoritative)"
     },
     {
       "label": "Live RTP @ 2x (n=149)",
-      "detail": "97.90% — pre-rakeback display values (see MANIFEST §Money Model); small-n variance — informational only (simulation is authoritative)"
+      "detail": "97.90% — informational only (simulation is authoritative)"
     },
     {
       "label": "Live RTP @ 5x (n=50)",
-      "detail": "69.93% — pre-rakeback display values (see MANIFEST §Money Model); small-n variance — informational only (simulation is authoritative)"
+      "detail": "69.93% — informational only (simulation is authoritative)"
     },
     {
       "label": "Live RTP @ 10x (n=50)",
-      "detail": "79.92% — pre-rakeback display values (see MANIFEST §Money Model); small-n variance — informational only (simulation is authoritative)"
+      "detail": "79.92% — informational only (simulation is authoritative)"
     },
     {
       "label": "Overall win rate",
@@ -133,9 +855,11 @@
     }
   ],
   "summary": {
-    "passed": 16,
+    "passed": 18,
     "flags": 0,
+    "operatorFlags": 0,
+    "captureFlags": 0,
     "hardFail": 0,
-    "total": 16
+    "verdict": "PROVABLY FAIR — Full Pass"
   }
 }
