@@ -113,8 +113,8 @@ export function run(ctx: VerifyContext): StepResult[] {
             ? 'Theoretical RTP sits at the house ceiling, to within one uint32 value, at every cash-out target of the '
             : `Theoretical RTP is below the house ceiling by a whole uint32 value or more at ${belowByQuantum} cash-out target(s) of the `)
           + `enumerated grid (1.01× to ${grid[grid.length - 1]}×), so a target in that range the capture never exercised `
-          + 'carries no unverified return — only no live observation of it. Above the grid it is not enumerated here, and '
-          + 'the floor in the 2^32 count lowers it at some targets (MANIFEST.md#distribution-rtp, DL-5).',
+          + 'carries no unverified return — only no live observation of it. Above the grid it is not enumerated here; every '
+          + 'target from 10,000.00× up is scored at Duel\'s stated 9,999.999× auto-cash-out cap (MANIFEST.md#distribution-rtp).',
       failures,
     },
   }];

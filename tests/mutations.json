@@ -196,16 +196,6 @@
     ]
   },
   {
-    "name": "M05k src/rng.ts cites an operator line that does not carry the quoted text",
-    "step": 5,
-    "runner": "verify",
-    "expect": "src/rng.ts operator citations",
-    "guard": "CRASH-09: every citation in src/rng.ts OPERATOR_SOURCE_CITES must quote the pinned operator file at the line it names.",
-    "file": "src/rng.ts",
-    "find": "{ line: 63, text: 'const houseEdge = 0.001;'",
-    "replace": "{ line: 62, text: 'const houseEdge = 0.001;'"
-  },
-  {
     "name": "M06 Phase C moved to another target in the plan",
     "step": 6,
     "runner": "verify",
@@ -262,8 +252,8 @@
     "expect": "✗ Step  8:",
     "guard": "Step 8 decides RTP ≤ 0.999 in integers; an edge constant of 0.05% puts the RTP above the claimed ceiling.",
     "file": "src/rng.ts",
-    "find": "const HOUSE_EDGE = 0.001;",
-    "replace": "const HOUSE_EDGE = 0.0005; // MUTATION"
+    "find": "const NUM = 999n * TWO32N;",
+    "replace": "const NUM = 9995n * TWO32N / 10n; // MUTATION: edge 0.1% -> 0.05%"
   },
   {
     "name": "M09 a round relabelled into another phase",
@@ -311,8 +301,8 @@
     "expect": "✗ Step 12:",
     "guard": "Step 12 binds the independent per-value model to every live round and compares its counts with src/rng.ts exactly.",
     "file": "tests/steps/crash-model.ts",
-    "find": "const raw = (TWO32 / (v + 1)) * 0.999;",
-    "replace": "const raw = (TWO32 / (v + 1)) * 0.9985; // MUTATION"
+    "find": "const cents = (100n * 999n * TWO32N) / (1000n * BigInt(v + 1));",
+    "replace": "const cents = (100n * 9985n * TWO32N) / (10000n * BigInt(v + 1)); // MUTATION"
   },
   {
     "name": "M12b negative control neutered",

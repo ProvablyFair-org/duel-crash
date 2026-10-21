@@ -6,13 +6,13 @@
  * can only fail on a typo; it cannot catch a closed-form formula that is wrong about the game.
  *
  * This module does not use the closed form. It takes the per-value mapping the game applies to
- * each uint32 (the published algorithm, steps 5–7 in MANIFEST.md#game-and-algorithm), binds that mapping to the
+ * each uint32 (the written specification, docs/ALGORITHM.md §2 Steps 4–5), binds that mapping to the
  * captured rounds by recomputing each round's uint32 with its own HMAC call, and then COUNTS the
  * uint32 values whose crash point reaches a target. The count is an integer, so it is compared
  * with the closed form exactly, and RTP against the 0.999 ceiling is decided in integers too.
  *
- * Counting: crashFromValue(v) is non-increasing in v (2^32/(v+1) decreases, and floor and max
- * preserve order), so {v : crash(v) >= x} is a prefix [0, k) and k is found by bisection.
+ * Counting: crashFromValue(v) is non-increasing in v (the quotient falls as v + 1 grows, and floor and
+ * max preserve order), so {v : crash(v) >= x} is a prefix [0, k) and k is found by bisection.
  */
 
 import * as crypto from 'crypto';
@@ -20,10 +20,16 @@ import * as crypto from 'crypto';
 export const TWO32 = 2 ** 32;
 const TWO32N = BigInt(TWO32);
 
-/** The per-value mapping: uint32 → displayed (2-dp floored) crash point. */
+/**
+ * The per-value mapping: uint32 → displayed (2-dp floored) crash point, as docs/ALGORITHM.md §2 Step 5
+ * states it: cents = floor(100 × 0.999 × 2^32 / (v + 1)) in exact arithmetic, then max(1.00, cents / 100).
+ * Written here as 100·999·2^32 / (1000·(v + 1)) in BigInt, so no floating-point rounding enters the map.
+ * (Duel's Verify-tab code evaluates (2^32/(v+1))·(1−0.001) in doubles; that form is run as a second check
+ * by Step 5, not modelled here.)
+ */
 export function crashFromValue(v: number): number {
-  const raw = (TWO32 / (v + 1)) * 0.999;
-  return Math.max(1, Math.floor(Math.max(1, raw) * 100) / 100);
+  const cents = (100n * 999n * TWO32N) / (1000n * BigInt(v + 1));
+  return Math.max(1, Number(cents) / 100);
 }
 
 /** The uint32 a live round drew: first 4 bytes of HMAC-SHA256(hex(serverSeed), utf8(hex(drand)) + ':0'). */

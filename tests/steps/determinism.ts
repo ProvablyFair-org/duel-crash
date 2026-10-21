@@ -11,7 +11,7 @@
 
 import { computeCrashPoint, computeCrashPointRaw } from '../../src/rng';
 import {
-  runOperatorVerifier, checkOperatorCites, operatorCents, OPERATOR_EXPECTED_LOGS, OPERATOR_VERIFIER_PROVENANCE,
+  runOperatorVerifier, operatorCents, OPERATOR_EXPECTED_LOGS, OPERATOR_VERIFIER_PROVENANCE,
 } from '../../src/operator-verifier';
 import type { VerifyContext, StepResult } from './context';
 import {
@@ -21,6 +21,27 @@ import {
 import { loadSiteVerifier, crashCents, SITE_VERIFIER_PROVENANCE } from '../../src/site-verifier';
 import { runLiveSiteVerifier, liveCrashCents, LIVE_SITE_PROVENANCE } from '../../src/live-site-verifier';
 import { crashFromValue } from './crash-model';
+
+/**
+ * Which of two doubles is nearer the spec's exact crash value 999·2^32 / (1000·(u+1)) (docs/ALGORITHM.md §2
+ * Step 5)? Returns -1 when `a` is nearer, 1 when `b` is, 0 on a tie. Integer arithmetic on the doubles'
+ * exact binary values; information only (the unfloored value is not scored).
+ */
+function nearerExact(a: number, b: number, u: number): -1 | 0 | 1 {
+  const frac = (f: number): [bigint, bigint] => {           // f = n / 2^s exactly
+    const dv = new DataView(new ArrayBuffer(8)); dv.setFloat64(0, f);
+    const hi = dv.getUint32(0), lo = dv.getUint32(4), e = (hi >>> 20) & 0x7ff;
+    const n = (((BigInt(hi & 0xfffff) << 32n) | BigInt(lo)) | (1n << 52n));
+    const s = 1075 - e;
+    return s >= 0 ? [n, BigInt(s)] : [n << BigInt(-s), 0n];
+  };
+  const err = (f: number): bigint => {                       // |f − exact| · 1000(u+1) · 2^1100
+    const [n, s] = frac(f); const v = n * 1000n * BigInt(u + 1) - 999n * (1n << 32n) * (1n << s);
+    return (v < 0n ? -v : v) * (1n << (1100n - s));
+  };
+  const ea = err(a), eb = err(b);
+  return ea < eb ? -1 : eb < ea ? 1 : 0;
+}
 
 /** A decimal money string → integer units at 6 dp (the game's money grid), or null off the grid. */
 function units6(s: string): bigint | null {
@@ -140,20 +161,23 @@ export function run(ctx: VerifyContext): StepResult[] {
       }
     }
 
-    // ── Operator leg: THE OPERATOR'S OWN Verify-tab code (CRASH-09) ──────────────────────────────
-    // Duel's Crash code panel, pasted by Paulo from the Verify tab on 2026-09-26, vendored verbatim under
-    // evidence/verify-tab/ and pinned in src/operator-verifier.ts. The pinned runner fills in the file's
-    // two "User input values" (drandSeed = the round's drandRandomness as captured, serverSeed) and runs
-    // it, as a player would. Its validateCrashResult returns the UNFLOORED multiplier; it must equal
-    // src/rng.ts computeCrashPointRaw EXACTLY (the same double), floor(x·100) must equal the served crash
-    // point in hundredths, and what it prints must equal what it returns. HARD FAIL otherwise, on a pin
-    // mismatch, on a count other than EXPECTED_ROUNDS, or on a citation that does not carry its text.
-    // The file's houseEdge is 0.001 (L63), applied once, to the crash point. It says nothing about the
-    // settlement (MANIFEST Money Model, DL-1).
+    // ── Operator leg, a SECOND CHECK: THE OPERATOR'S OWN Verify-tab code (CRASH-09) ────────────────
+    // src/rng.ts is rebuilt from docs/ALGORITHM.md, not from this file; this leg runs Duel's file as a
+    // second check. Duel's Crash code panel, pasted by Paulo from the Verify tab on 2026-09-26, vendored
+    // verbatim under evidence/verify-tab/ and pinned in src/operator-verifier.ts. The pinned runner fills in
+    // the file's two "User input values" (drandSeed = the round's drandRandomness as captured, serverSeed)
+    // and runs it, as a player would. Its validateCrashResult returns the UNFLOORED multiplier. Scored: its
+    // DISPLAYED crash point floor(x·100) must equal the served crash point AND src/rng.ts computeCrashPoint
+    // in hundredths, exactly, and what it prints must equal what it returns. HARD FAIL otherwise, on a pin
+    // mismatch, or on a count other than EXPECTED_ROUNDS. Information only, not scored: the unfloored double
+    // against src/rng.ts computeCrashPointRaw — Duel's file rounds twice, (2^32/(u+1))·(1−0.001), src/rng.ts
+    // once, 0.999·2^32/(u+1), so the two can be one rounding apart; the bit-identical count, the largest
+    // relative difference and which side is nearer the exact value are reported. The file's houseEdge is
+    // 0.001, applied once, to the crash point. It says nothing about the settlement (MANIFEST Money Model, DL-1).
     const opIssues: string[] = [];
     const op = runOperatorVerifier(rounds.map((r, i) => ({ id: String(i), inputs: { drandSeed: r.result.drandRandomness, serverSeed: r.result.serverSeed } })));
-    const opCites = checkOperatorCites();
-    let opChecked = 0, opVsServed = 0, opVsRaw = 0, opPrinted = 0, opErrors = 0;
+    let opChecked = 0, opVsServed = 0, opVsRng = 0, opPrinted = 0, opErrors = 0;
+    let rawBitIdentical = 0, rawDiffer = 0, rawRngNearer = 0, rawOperatorNearer = 0, rawTie = 0, rawMaxRelDiff = 0;
     const opFirst: string[] = [];
     if (!op.results) {
       opIssues.push(`operator Verify-tab code: ${op.error}`);
@@ -165,18 +189,28 @@ export function run(ctx: VerifyContext): StepResult[] {
         if (o === undefined) return;
         opChecked++;
         if (o.value === null || o.error) { opErrors++; if (opFirst.length < 3) opFirst.push(`round ${r.roundId}: ${o.error ?? 'no value'}`); return; }
-        if (o.value !== computeCrashPointRaw(r.result.serverSeed, r.result.drandRandomness)) { opVsRaw++; if (opFirst.length < 3) opFirst.push(`round ${r.roundId}: operator ${o.value} vs src/rng.ts raw ${computeCrashPointRaw(r.result.serverSeed, r.result.drandRandomness)}`); }
-        if (operatorCents(o.value) !== crashCents(r.result.crashPoint)) { opVsServed++; if (opFirst.length < 3) opFirst.push(`round ${r.roundId}: operator ${o.value} vs served ${r.result.crashPoint}`); }
+        const opDisplayed = operatorCents(o.value);
+        if (opDisplayed === null || opDisplayed !== crashCents(r.result.crashPoint)) { opVsServed++; if (opFirst.length < 3) opFirst.push(`round ${r.roundId}: operator ${o.value} vs served ${r.result.crashPoint}`); }
+        if (opDisplayed === null || opDisplayed !== crashCents(computeCrashPoint(r.result.serverSeed, r.result.drandRandomness))) { opVsRng++; if (opFirst.length < 3) opFirst.push(`round ${r.roundId}: operator ${o.value} vs src/rng.ts computeCrashPoint ${computeCrashPoint(r.result.serverSeed, r.result.drandRandomness)}`); }
+        // information only: the unfloored double
+        const raw = computeCrashPointRaw(r.result.serverSeed, r.result.drandRandomness);
+        if (o.value === raw) rawBitIdentical++;
+        else {
+          rawDiffer++;
+          rawMaxRelDiff = Math.max(rawMaxRelDiff, Math.abs(raw - o.value) / o.value);
+          const u = Math.round((0.999 * 2 ** 32) / raw - 1);   // raw = 0.999·2^32/(u+1) is strictly decreasing in u
+          const n = raw > 1 ? nearerExact(raw, o.value, u) : 0;
+          if (n < 0) rawRngNearer++; else if (n > 0) rawOperatorNearer++; else rawTie++;
+        }
         if (o.logs.length === 1 && o.logs[0] === `Crash result: ${String(o.value)}`) opPrinted++;
         else if (opFirst.length < 3) opFirst.push(`round ${r.roundId}: printed ${JSON.stringify(o.logs).slice(0, 100)}`);
       });
       if (opChecked !== EXPECTED_ROUNDS) opIssues.push(`operator Verify-tab code ran on ${opChecked} rounds, ${EXPECTED_ROUNDS} declared`);
-      if (opVsServed + opVsRaw + opErrors > 0 || opPrinted !== opChecked) {
-        opIssues.unshift(`operator Verify-tab code disagrees: floor(x·100) vs the served crash point on ${opVsServed}, unfloored value vs `
-          + `src/rng.ts computeCrashPointRaw on ${opVsRaw}, ${opErrors} run error(s), printed ≠ returned on ${opChecked - opErrors - opPrinted} (${opFirst.join('; ')})`);
+      if (opVsServed + opVsRng + opErrors > 0 || opPrinted !== opChecked) {
+        opIssues.unshift(`operator Verify-tab code disagrees: displayed crash point floor(x·100) vs the served crash point on ${opVsServed}, `
+          + `vs src/rng.ts computeCrashPoint on ${opVsRng}, ${opErrors} run error(s), printed ≠ returned on ${opChecked - opErrors - opPrinted} (${opFirst.join('; ')})`);
       }
     }
-    if (opCites.bad.length > 0 || opCites.checked === 0) opIssues.push(`src/rng.ts operator citations: ${opCites.bad.slice(0, 2).join('; ')}`);
 
     // Bound to the population of record: on an empty or shortened dataset "0 mismatches" was free.
     const recomputeOk = mismatch === 0 && match === EXPECTED_ROUNDS;
@@ -193,14 +227,17 @@ export function run(ctx: VerifyContext): StepResult[] {
         + `${live.files.filter(f => f.match).length}/${live.files.length} SHA-256 pins MATCH) executed on ${liveChecked}/${EXPECTED_ROUNDS} `
         + `rounds: printed crash point equal to the served one and src/rng.ts on every round (${liveVsServed} / ${liveVsRng} differ, `
         + `${liveOffGrid} off-grid), printed server-seed hash equal to the served commitment on every round (${liveHash} differ). `
-        + `Operator-code parity (CRASH-09): Duel's own Crash Verify-tab code (${OPERATOR_VERIFIER_PROVENANCE.savedAs}, `
-        + `${OPERATOR_VERIFIER_PROVENANCE.from}, SHA-256 ${OPERATOR_VERIFIER_PROVENANCE.sha256.slice(0, 16)}…, pinned) executed with only its two `
-        + `"User input values" filled in (drandSeed = the captured drandRandomness hex, serverSeed) on ${opChecked}/${EXPECTED_ROUNDS} rounds: `
-        + `its unfloored result equals src/rng.ts computeCrashPointRaw as the same double on every round (${opVsRaw} differ) — the operator `
-        + `code's formula (2^32/(value+1))·(1−0.001), one 0.1 % on the crash point, is the formula the package recomputes; floor(x·100) `
-        + `equals the served crash point on every round (${opVsServed} differ); printed = returned on ${opPrinted}/${opChecked}; operator lines `
-        + `cited by src/rng.ts ${opCites.checked - opCites.bad.length}/${opCites.checked} verbatim. The code computes the crash point only; `
-        + `it says nothing about settlement (MANIFEST Money Model, DL-1)`
+        + `Operator-code parity (CRASH-09), a second check: src/rng.ts is rebuilt from the written specification docs/ALGORITHM.md by an `
+        + `implementer who never opened Duel's code, and Duel's own Crash Verify-tab code (${OPERATOR_VERIFIER_PROVENANCE.savedAs}, `
+        + `${OPERATOR_VERIFIER_PROVENANCE.from}, SHA-256 ${OPERATOR_VERIFIER_PROVENANCE.sha256.slice(0, 16)}…, pinned) is run as a second check, `
+        + `not used as the source. Executed with only its two "User input values" filled in (drandSeed = the captured drandRandomness hex, `
+        + `serverSeed) on ${opChecked}/${EXPECTED_ROUNDS} rounds: its displayed crash point floor(x·100) equals the served crash point `
+        + `(${opVsServed} differ) and src/rng.ts computeCrashPoint (${opVsRng} differ) on every round, exactly; printed = returned on `
+        + `${opPrinted}/${opChecked}. Information only, not scored: its unfloored result is bit-identical to src/rng.ts computeCrashPointRaw `
+        + `on ${rawBitIdentical}/${opChecked} rounds and differs on ${rawDiffer} (largest relative difference ${rawMaxRelDiff.toPrecision(3)}), `
+        + `from rounding order: Duel's (2^32/(u+1))·(1−0.001) rounds twice, src/rng.ts 0.999·2^32/(u+1) once; of the ${rawDiffer}, src/rng.ts `
+        + `is nearer the exact value 999·2^32/(1000·(u+1)) on ${rawRngNearer}, Duel's on ${rawOperatorNearer}${rawTie ? `, equal on ${rawTie}` : ''}. `
+        + `The code computes the crash point only; it says nothing about settlement (MANIFEST Money Model, DL-1)`
       : !recomputeOk
         ? `${match} recomputed matches of ${EXPECTED_ROUNDS} required, ${mismatch} mismatches${mismatches.length ? ': ' + mismatches.join('; ') : ''}`
         : [
@@ -230,9 +267,13 @@ export function run(ctx: VerifyContext): StepResult[] {
         },
         operatorVerifier: {
           files: op.files.map(f => ({ file: f.file, pinnedSha256: f.pinned, actualSha256: f.actual, match: f.match })),
-          provenance: OPERATOR_VERIFIER_PROVENANCE, roundsExecuted: opChecked, differsFromServed: opVsServed,
-          differsFromRngRaw: opVsRaw, printedEqualsReturned: opPrinted, errors: opErrors,
-          citesChecked: opCites.checked, citesBad: opCites.bad.length, issues: opIssues,
+          provenance: OPERATOR_VERIFIER_PROVENANCE, role: 'second check, not the source of src/rng.ts',
+          roundsExecuted: opChecked, differsFromServed: opVsServed, differsFromRng: opVsRng,
+          printedEqualsReturned: opPrinted, errors: opErrors, issues: opIssues,
+          unflooredInformational: {
+            bitIdenticalToRngRaw: rawBitIdentical, differsFromRngRaw: rawDiffer, maxRelativeDifference: rawMaxRelDiff,
+            rngNearerExact: rawRngNearer, operatorNearerExact: rawOperatorNearer, equalDistance: rawTie,
+          },
         },
       },
     });

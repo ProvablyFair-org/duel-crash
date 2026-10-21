@@ -27,14 +27,14 @@ const DECLARED = {
   auditId: 'PF-2026-DL05',
   game: 'crash',
   casino: 'duel',
-  release: 'v1.1.0',
+  release: 'v1.2.0',
   framework: '1.1',
   environmentHost: 'duel.com',
   environmentStage: 'production',
   environmentQualifier: null,
-  supersedes: 'v1.0.0',
+  supersedes: 'v1.1.0',
   signature: 'SHA256:gEujiJm2pRyq7lQsfYQfQ1r97H/J7GdaKHbOW8GtikY',
-  pending: 'supersedes is the latest tag read from ProvablyFair-org/duel-crash on 2026-10-19 (v1.0.0, which points at commit 7350abd of 2026-09-14, not at the 2026-06-04 publication f97d5b8).',
+  pending: '',
 };
 
 /** How Pass 1 is seeded and attested — described as the package declares it (its src/ and MANIFEST.md). */
@@ -67,7 +67,7 @@ function captureWindow(dataset) {
 /** The falsifiability battery. `mutations` is computed from the registry; the RUN RESULT is DECLARED
  * from the last completed `npm run mutate` (cite it in `source`) and must be refreshed by re-running
  * the battery — a generator never asserts a kill it did not run. null = not run for this manifest. */
-const FALSIFIABILITY_DECLARED = { killed: 44, declaredSurvivors: 0, source: 'npm run mutate 2026-10-14 evening (Apple M2 Max, 12 cores, node v22.23.1), the whole registry (44 entries) in one run on the tree carrying the FIXPASS2 C3 entries (baseline verify exit 0, mocha exit 0): 44/44 mutations killed; the 44 kills cover 18/18 scored steps; 2026-10-15 --only M16, MC3: 6/6 killed, MC3a/MC3b exit 5' };
+const FALSIFIABILITY_DECLARED = { killed: 43, declaredSurvivors: 0, source: 'npm run mutate 2026-10-20 (Apple M2 Max, 12 cores, node v22.23.1, machine under heavy load from other runs), the whole registry (43 entries; M05k retired with the src/rng.ts citation table, M08 re-anchored on the rebuilt module) in one run on the clean-room tree (baseline verify exit 0, mocha exit 0): 42/43 killed, 18/18 scored steps covered; M01b was cut off by the 900 s runner timeout (exit null) and killed on re-run with --only M01b (1/1); MC3a/MC3b exit 5' };
 
 /** How long `npm test` takes, and on what — a property of the machine, so DECLARED from measured runs. */
 const RUNTIME = {

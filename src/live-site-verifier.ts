@@ -8,7 +8,7 @@
  * lands in class method [n5.CRASH], which reads the round's drand randomness from the `clientSeed`
  * field, fixes the nonce at 0 itself, and returns `finalMultiplier` — the crash point as a toFixed(2)
  * string — and the server-seed hash. It computes no win flag and no payout. A player who pastes a
- * round into that page is trusting THAT code, not this package's port. Its source repository is not
+ * round into that page is trusting THAT code, not this package's src/rng.ts. Its source repository is not
  * available to this audit; the deployed bundle is.
  *
  * WHAT THIS FILE DOES.

@@ -2,7 +2,7 @@
   "auditId": "PF-2026-DL05",
   "game": "crash",
   "casino": "duel",
-  "release": "v1.1.0",
+  "release": "v1.2.0",
   "framework": "1.1",
   "simulation": {
     "seeding": "pinned",
@@ -28,8 +28,8 @@
     "outputs/drand-api-verification.json": "6de7a635b429b9412de25999e1501a3ad8209a23cbdd0830ea89656df3c48d1c",
     "outputs/simulation-results.json": "d78d38a7e2e98da89dd0781bfd03dba459049d0ebcf94e1614c9b48afff9d555",
     "outputs/rtp-convergence.html": "ea242a6bf421341beb0096f37edfaa962e5b377cb3090a3600d9cb10380e261b",
-    "outputs/verification-results.json": "d78ec42352a2b66d52a1aca37b32bf1c08a6eeb93d3a2ad9fce1dbf68b3a82b6",
-    "outputs/rtp-claim-table.json": "39d3bc0f7415b97943701081c47700fef5f6baff155b77b815a859516c2c61c9"
+    "outputs/verification-results.json": "2ded53b275fe2086324a8d4b6583d16927d906f71e141e527bb578010252c504",
+    "outputs/rtp-claim-table.json": "a80f359c34cd0dab42ea1ecef8ce3f3eebae8b4dfc1e49d95ead8059fea20ca1"
   },
   "verdict": "PROVABLY FAIR — Full Pass",
   "scored": {
@@ -49,15 +49,15 @@
     "stage": "production",
     "qualifier": null
   },
-  "supersedes": "v1.0.0",
+  "supersedes": "v1.1.0",
   "signature": "SHA256:gEujiJm2pRyq7lQsfYQfQ1r97H/J7GdaKHbOW8GtikY",
   "falsifiability": {
     "registry": "tests/mutations.json",
     "runner": "scripts/mutate.mjs",
-    "mutations": 44,
-    "killed": 44,
+    "mutations": 43,
+    "killed": 43,
     "declaredSurvivors": 0,
-    "source": "npm run mutate 2026-10-14 evening (Apple M2 Max, 12 cores, node v22.23.1), the whole registry (44 entries) in one run on the tree carrying the FIXPASS2 C3 entries (baseline verify exit 0, mocha exit 0): 44/44 mutations killed; the 44 kills cover 18/18 scored steps; 2026-10-15 --only M16, MC3: 6/6 killed, MC3a/MC3b exit 5"
+    "source": "npm run mutate 2026-10-20 (Apple M2 Max, 12 cores, node v22.23.1, machine under heavy load from other runs), the whole registry (43 entries; M05k retired with the src/rng.ts citation table, M08 re-anchored on the rebuilt module) in one run on the clean-room tree (baseline verify exit 0, mocha exit 0): 42/43 killed, 18/18 scored steps covered; M01b was cut off by the 900 s runner timeout (exit null) and killed on re-run with --only M01b (1/1); MC3a/MC3b exit 5"
   },
-  "pending": "supersedes is the latest tag read from ProvablyFair-org/duel-crash on 2026-10-19 (v1.0.0, which points at commit 7350abd of 2026-09-14, not at the 2026-06-04 publication f97d5b8)."
+  "pending": ""
 }

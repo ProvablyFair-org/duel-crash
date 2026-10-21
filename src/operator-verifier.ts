@@ -2,7 +2,13 @@
  * THE OPERATOR'S OWN VERIFIER CODE (profile CRASH-09; Step 5, operator leg).
  *
  * Duel.com's Provably Fair → Verify page, with Crash selected, shows a JavaScript code panel. That code
- * is the operator's published algorithm for Crash — Duel's own source for the crash point.
+ * is the operator's published algorithm for Crash.
+ *
+ * ROLE (since 20 Oct 2026, v1.2.0). This file is a SECOND CHECK, not the source of src/rng.ts. src/rng.ts is
+ * rebuilt from the written specification docs/ALGORITHM.md by an implementer who never opened Duel's code;
+ * Duel's file is run here, byte for byte, to show that it agrees with that rebuild and with the served
+ * crash points. Through v1.1.0 src/rng.ts was a port of this file and, from 26 Sep 2026, cited 10 of its
+ * lines; the port and that citation table were removed on 20 Oct 2026.
  *
  * PROVENANCE. Pasted by Paulo from duel.com → Provably Fair → Verify (Crash) on 2026-09-26 and saved
  * verbatim as evidence/verify-tab/duel-verify-tab-crash-2026-09-26.js (committed in 9333460; 2,336
@@ -21,10 +27,10 @@
  *      asserted byte-identical. The file returns the UNFLOORED crash multiplier
  *      max(1.0, (2^32/(value+1))·(1−0.001)) as a JS number (L64–L66) and prints "Crash result: <it>".
  *      The served crash point is on the 2-dp grid; the caller maps the operator's number onto it with
- *      floor(x·100) — that mapping is the harness's, not Duel's.
+ *      floor(x·100) — that mapping is the harness's, not Duel's. The DISPLAYED crash point (that floored
+ *      value) is what is compared, exactly; the unfloored double is reported as information only, because
+ *      Duel's file rounds twice ((2^32/(value+1))·(1−0.001)) and src/rng.ts once (0.999·2^32/(u+1)).
  *      The runner's stdin and stdout are temp FILES, not pipes, and the run has a hard timeout.
- *   3. CHECKS THE CITATIONS: every line src/rng.ts cites (OPERATOR_SOURCE_CITES) must carry, at that
- *      line number of the pinned file, the text it quotes.
  */
 
 import * as crypto from 'crypto';
@@ -32,7 +38,6 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
-import { OPERATOR_SOURCE_CITES } from './rng';
 
 export const PACKAGE_ROOT = path.join(__dirname, '..');
 export const OPERATOR_VERIFIER_FILE = 'evidence/verify-tab/duel-verify-tab-crash-2026-09-26.js';
@@ -141,18 +146,4 @@ export function runOperatorVerifier(rounds: OperatorRound[], root = PACKAGE_ROOT
   } catch (e) {
     return { files, hashesMatch, results: null, shippedLogs: [], error: `operator verifier output unreadable: ${(e as Error).message}` };
   }
-}
-
-/** Every citation in src/rng.ts must quote, verbatim, the pinned operator file at the line it names. */
-export function checkOperatorCites(root = PACKAGE_ROOT): { checked: number; bad: string[] } {
-  const p = path.join(root, OPERATOR_VERIFIER_FILE);
-  if (!fs.existsSync(p)) return { checked: 0, bad: [`${OPERATOR_VERIFIER_FILE} not found`] };
-  const lines = fs.readFileSync(p, 'utf8').split('\n');
-  const bad: string[] = [];
-  for (const c of OPERATOR_SOURCE_CITES) {
-    const at = lines[c.line - 1];
-    if (at === undefined || !at.includes(c.text)) bad.push(`L${c.line} does not contain ${JSON.stringify(c.text)} (it reads ${JSON.stringify((at ?? '').trim())})`);
-  }
-  if (OPERATOR_SOURCE_CITES.length === 0) bad.push('src/rng.ts cites no operator line');
-  return { checked: OPERATOR_SOURCE_CITES.length, bad };
 }

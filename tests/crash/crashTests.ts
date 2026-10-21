@@ -142,11 +142,16 @@ describe('Statistics', () => {
   });
 });
 
-// ── The operator's own Verify-tab code (profile CRASH-09) ─────────────────────
-describe('Operator source — Duel\'s own Crash Verify-tab code, executed with only its inputs filled in (pasted 2026-09-26)', function () {
+// ── The operator's own Verify-tab code, a SECOND CHECK (profile CRASH-09) ─────────────────────
+// src/rng.ts is rebuilt from docs/ALGORITHM.md by an implementer who never opened Duel's code; Duel's
+// published Verify-tab code is run here as a second check, not used as the source. Scored: the DISPLAYED
+// crash point (floor(x·100) of the file's unfloored return), exactly. The unfloored double is one rounding
+// apart from src/rng.ts computeCrashPointRaw on some rounds (Duel's file rounds twice, src/rng.ts once) and
+// is not asserted bit-identical; Step 5 reports that count as information.
+describe('Second check — Duel\'s own Crash Verify-tab code, executed with only its inputs filled in (pasted 2026-09-26)', function () {
   this.timeout(300_000);
   // duel.com → Provably Fair → Verify (Crash) code panel, pasted by Paulo 2026-09-26, saved verbatim (src/operator-verifier.ts)
-  const { runOperatorVerifier, checkOperatorCites, operatorCents, OPERATOR_VERIFIER_PINS, OPERATOR_VERIFIER_FILE, OPERATOR_EXPECTED_LOGS } =
+  const { runOperatorVerifier, operatorCents, OPERATOR_VERIFIER_PINS, OPERATOR_VERIFIER_FILE, OPERATOR_EXPECTED_LOGS } =
     require('../../src/operator-verifier') as typeof import('../../src/operator-verifier');
   const data = require('../../data/crash-master-1100rounds.json') as { rounds: Array<{ roundId: number; result: { serverSeed: string; drandRandomness: string; crashPoint: number } }> };
   const VECTORS_FOR_OPERATOR = [
@@ -165,27 +170,22 @@ describe('Operator source — Duel\'s own Crash Verify-tab code, executed with o
     assert.deepStrictEqual(run.shippedLogs, [...OPERATOR_EXPECTED_LOGS]);
   });
 
-  it('every operator line src/rng.ts cites carries the quoted text verbatim', () => {
-    const c = checkOperatorCites();
-    assert.deepStrictEqual(c.bad, []);
-    assert.ok(c.checked > 0);
-  });
-
-  it('fixed vectors: the operator code returns the unfloored src/rng.ts value and floors to the known crash point', () => {
+  it('fixed vectors: the operator code\'s displayed crash point equals the known crash point and src/rng.ts computeCrashPoint', () => {
     VECTORS_FOR_OPERATOR.forEach((v, i) => {
       const o = run.results!.get(`known${i}`)!;
-      assert.strictEqual(o.value, computeCrashPointRaw(v.serverSeed, v.drand));
       assert.strictEqual(operatorCents(o.value), Math.round(v.expected * 100));
+      assert.strictEqual(operatorCents(o.value), Math.round(computeCrashPoint(v.serverSeed, v.drand) * 100));
       assert.deepStrictEqual(o.logs, [`Crash result: ${String(o.value)}`]);
     });
   });
 
-  it('every captured round: the operator value equals src/rng.ts computeCrashPointRaw and floors to the served crash point (1,100/1,100)', () => {
+  it('every captured round: the operator code\'s displayed crash point equals the served crash point and src/rng.ts computeCrashPoint (1,100/1,100)', () => {
     let agree = 0;
     data.rounds.forEach((r, i) => {
       const o = run.results!.get(`r${i}`)!;
-      if (o.value === computeCrashPointRaw(r.result.serverSeed, r.result.drandRandomness)
-        && operatorCents(o.value) === Math.round(r.result.crashPoint * 100)) agree++;
+      const shown = operatorCents(o.value);
+      if (shown !== null && shown === Math.round(r.result.crashPoint * 100)
+        && shown === Math.round(computeCrashPoint(r.result.serverSeed, r.result.drandRandomness) * 100)) agree++;
     });
     assert.strictEqual(data.rounds.length, 1100);
     assert.strictEqual(agree, 1100);

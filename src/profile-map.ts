@@ -81,11 +81,13 @@ export const STEP_CLAIMS: Record<number, StepClaims> = {
         + 'No cap is declared: the upper end is the map maximum (CRASH-14). The win rule and its boundary are Step 7; P(1.00) '
         + 'is Step 12' },
     { id: 'CRASH-14', coverage: 'partial',
-      note: 'cap half n/a WITH EVIDENCE (rule R2): Duel declares no cap; the step prints the largest served crash point '
+      note: 'cap half n/a WITH EVIDENCE (rule R2): no cap on the served crash point is declared or observed; the step prints the largest served crash point '
         + '(13,664.99×) and the map maximum at v = 0 (4,290,672,328.7×, from the independent per-value model) and fails a '
         + 'served value above it. PARTIAL: the target-bounds half has nothing to check against — Duel declares no minimum or '
         + 'maximum cash-out target in the package (declaration unknowns), so "every target within the declared min/max" is '
-        + 'unestablished' },
+        + 'unestablished. Payout cap: Duel cashes out every bet at 9,999.999× at most, whatever target is set ('
+        + 'Duel\'s statement as relayed by Mike in Slack on 21 October 2026: auto cash-out at 9999.999x; no captured bet reached it); that caps the payout, not the served crash point (round 831375 was served 13,664.99×, '
+        + 'its captured bet having cashed out at 2×). The RTP table (CRASH-19) applies it' },
     { id: 'CRASH-24', coverage: 'full',
       note: 'HASH-MATCHED AND EXECUTED, two player verifiers (ported from Duel Dice 2026-09-26). (1) DOCS SITE: VerifyBets '
         + 'games/crash/derive.js + lib/hmac-sha256.js read with git cat-file from mikepforg/pf-audit-duel origin/main @ '
@@ -176,14 +178,17 @@ export const STEP_CLAIMS: Record<number, StepClaims> = {
         + 'the exact enumeration below, not on prose' },
     { id: 'CRASH-08', coverage: 'full',
       note: 'the draw is monotone in one uint32; at EVERY 0.01 cash-out point from 1.01× to 100,000× (9,999,900 points; bound '
-        + 'and its reason stated in src/loader.ts RTP_GRID_MAX — Duel declares no maximum target and no cap) the uint32 '
+        + 'and its reason stated in src/loader.ts RTP_GRID_MAX) the uint32 '
         + 'values reaching it are counted from the independent model and 0 ≤ 0.999 − RTP < x/2^32 is decided in integers, '
         + 'i.e. the survival probability is within one uint32 value (2^-32) of 0.999/x; 0 above, 0 below by a whole value. '
-        + 'Beyond 100,000× the claim is not enumerated' },
+        + 'Beyond 100,000× not enumerated; every target from 10,000.00× up is scored at Duel\'s stated 9,999.999× cap (CRASH-19)' },
     { id: 'CRASH-19', coverage: 'full',
       note: 'the per-target effective edge over the same 9,999,900-point grid, both sides of the claimed 0.1 %, exact; '
         + 'the distribution RTP only — settlement and the Zero Edge rakeback are stated separately in MANIFEST Money Model '
-        + '(the full amount × cashout credited on the 3 wins looked up, DL-1)' },
+        + '(the full amount × cashout credited on the 3 wins looked up, DL-1). Since 21 Oct 2026 the RTP table applies '
+        + 'Duel\'s auto-cash-out cap (every bet cashes out at 9,999.999× at most, Duel\'s statement as relayed by Mike in Slack on 21 October 2026: auto cash-out at 9999.999x; no captured bet reached it): every '
+        + 'target from 10,000.00× up is scored at Duel\'s stated cap, RTP 99.899936 %, so the table covers every target a player can set; '
+        + 'the lowest RTP of any target is 99.899768 % (9,999.05×)' },
   ] },
   17: { claims: [{ id: 'CRASH-27', coverage: 'full',
     note: 'the three artifacts of record (drand-api-verification.json, rtp-convergence.html, simulation-results.json) match '
@@ -232,21 +237,31 @@ export const NOT_APPLICABLE: Array<{ id: string; reason: string }> = [
 export const PACKAGE_CHECKS: Array<{ id: string; artifact: string; coverage: Coverage | 'none'; note: string }> = [
   {
     id: 'CRASH-09',
-    artifact: 'tests/crash/crashTests.ts (Operator source block) + src/rng.ts OPERATOR_SOURCE_CITES + src/operator-verifier.ts + Step 5',
+    artifact: 'docs/ALGORITHM.md + tests/crash/RngSpecTests.ts + tests/crash/crashTests.ts (Second check block) + src/operator-verifier.ts + Step 5',
     coverage: 'full',
-    note: 'CLOSED 2026-09-26 (was partial: Duel\'s crash Verify code had not been copied, MANIFEST DL-4). Duel\'s own Crash Verify-tab '
-      + 'code, pasted by Paulo from duel.com Verify tab 2026-09-26, is vendored verbatim at '
+    note: 'REWRITTEN 2026-10-20 (v1.2.0). src/rng.ts is rebuilt from a written specification, docs/ALGORITHM.md '
+      + '(framework games/crash/ALGORITHM.md, SHA-256 d487ca48…), by an implementer who never opened Duel\'s code; Duel\'s '
+      + 'published Verify-tab code is run as a second check, not used as the source. Through v1.1.0 src/rng.ts was a port '
+      + 'of that code and cited 10 of its lines (OPERATOR_SOURCE_CITES); the port and the citation table are gone. Duel\'s own '
+      + 'Crash Verify-tab code, pasted by Paulo from duel.com Verify tab 2026-09-26, is vendored verbatim at '
       + 'evidence/verify-tab/duel-verify-tab-crash-2026-09-26.js (E16, SHA-256 c699cd54…, never edited) and pinned with its runner in '
-      + 'src/operator-verifier.ts. The asserts, each met: (1) "unit tests reproduce at least one captured round … against the operator\'s '
-      + 'published algorithm" — the Operator source block in tests/crash/crashTests.ts EXECUTES the pinned file with only its two "User '
-      + 'input values" filled in (drandSeed = the captured drandRandomness hex, serverSeed) on all 1,100 captured rounds: its unfloored '
-      + 'result equals src/rng.ts computeCrashPointRaw as the same double and floor(x·100) equals the served crash point on 1,100/1,100; '
-      + '(2) "fixed vectors" — two known rounds (2.81, 1.02) through the same file; (3) "the adapter cites the operator source line it '
-      + 'ports" — src/rng.ts OPERATOR_SOURCE_CITES names 10 lines of the pinned file, each checked verbatim (10/10). Step 5 runs the same '
-      + 'execution in the verifier. The operator code applies one 0.1 % (houseEdge 0.001, L63) to the crash point — the formula the '
-      + 'package recomputes; it says nothing about settlement (MANIFEST Money Model, DL-1). FAIL '
-      + 'probed: M05g (a line of the file changed AND re-pinned), M05h (file byte, no re-pin), M05i (runner byte, no re-pin), M05j (runner '
-      + 'forged AND re-pinned), M05k (a citation moved). Not established: that the Verify button, or Duel\'s server, runs exactly this code',
+      + 'src/operator-verifier.ts. The asserts: (1) "unit tests reproduce at least one captured round … against the operator\'s '
+      + 'published algorithm" — the Second check block in tests/crash/crashTests.ts EXECUTES the pinned file with only its two "User '
+      + 'input values" filled in (drandSeed = the captured drandRandomness hex, serverSeed) on all 1,100 captured rounds: its displayed '
+      + 'crash point floor(x·100) equals the served crash point and src/rng.ts computeCrashPoint exactly on 1,100/1,100. The unfloored '
+      + 'double is reported as information only, not scored: bit-identical to src/rng.ts computeCrashPointRaw on 824/1,100, largest '
+      + 'relative difference 2.21e-16 on the other 276, from rounding order (Duel\'s (2^32/(u+1))·(1−0.001) rounds twice, src/rng.ts '
+      + '0.999·2^32/(u+1) once); of the 276, src/rng.ts is nearer the exact value 999·2^32/(1000·(u+1)) on 270 and Duel\'s on 6 '
+      + '(Step 5 re-measures these counts; through v1.1.0 the unfloored value was bit-identical on 1,100/1,100 because src/rng.ts '
+      + 'used Duel\'s expression); (2) "fixed vectors" — two known rounds (2.81, 1.02) through the same file, and '
+      + 'tests/crash/RngSpecTests.ts runs the spec\'s own vectors and properties against src/rng.ts (87/87); (3) "the adapter cites the '
+      + 'operator source line it ports" — superseded for this package by the 20 Oct 2026 rule that RNG code is rebuilt from a written '
+      + 'spec: nothing is ported, so no operator line is cited; docs/ALGORITHM.md §4 names the source of every step instead (Duel\'s '
+      + 'public pages, the standard construction, the 1,100 live rounds, or black-box readings of Duel\'s Verify page). Step 5 runs the '
+      + 'same execution in the verifier. The operator code applies one 0.1 % (houseEdge 0.001, L63) to the crash point, as the spec '
+      + 'does; it says nothing about settlement (MANIFEST Money Model, DL-1). FAIL probed: M05g (a line of the file changed AND '
+      + 're-pinned), M05h (file byte, no re-pin), M05i (runner byte, no re-pin), M05j (runner forged AND re-pinned). Not established: '
+      + 'that the Verify button, or Duel\'s server, runs exactly this code',
   },
   {
     id: 'CRASH-23', artifact: 'MANIFEST.md#verification-results', coverage: 'full',
@@ -276,7 +291,8 @@ export const PACKAGE_CHECKS: Array<{ id: string; artifact: string; coverage: Cov
       + 'mutation that kills it (the runner reads the scored steps from its own baseline run), each entry carries an '
       + '`expect` marker so the intended step fires, and re-pin forgeries are included (dataset and artifact re-pinned '
       + 'after the edit; added 2026-09-26: Duel\'s Verify-tab code and its runner forged AND re-pinned, M05g and M05j, with '
-      + 'M05h, M05i and M05k). No declared survivors',
+      + 'M05h and M05i; M05k, which broke a src/rng.ts citation, was retired on 20 Oct 2026 with the citation table, and M08 '
+      + 'was re-anchored on the rebuilt module\'s edge constant). No declared survivors',
   },
   {
     id: 'CRASH-30', artifact: 'MANIFEST.md#limitations-and-trust + MANIFEST.md#evidence', coverage: 'full',
