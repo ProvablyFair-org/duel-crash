@@ -1,8 +1,8 @@
 # Duel Crash — Consolidated Audit Overview
 
-**Audit ID:** PF-2026-DL05 · **Auditor:** ProvablyFair.org · **Release:** `v1.2.0` · **Framework:** 1.1
+**Audit ID:** PF-2026-DL05 · **Auditor:** ProvablyFair.org · **Release:** `v1.2.1` · **Framework:** 1.1
 
-Audit date: April 2026. Dataset of record: **1,100 rounds** captured from `2026-04-14T20:17:12.676Z` to `2026-04-15T14:21:25.365Z`. Original publication: 4 June 2026 (public commit `f97d5b8`). The public `v1.0.0` tag, set on 17 September 2026, points at commit `7350abd` of 14 September 2026: that publication plus one commit ([Release history](#release-history)). Audit report: https://audit.provablyfair.org/casino/duel/games/crash/overview. This overview consolidates the package documentation as of 4 October 2026. The machine-readable release identity is in [RELEASE-MANIFEST.json](RELEASE-MANIFEST.json), which is v1.2.0's; v1.1.0's signed release identity is in the `RELEASE-MANIFEST.json` at the `v1.1.0` tag.
+Audit date: April 2026. Dataset of record: **1,100 rounds** captured from `2026-04-14T20:17:12.676Z` to `2026-04-15T14:21:25.365Z`. Original publication: 4 June 2026 (public commit `f97d5b8`). The public `v1.0.0` tag, set on 17 September 2026, points at commit `7350abd` of 14 September 2026: that publication plus one commit ([Release history](#release-history)). Audit report: https://audit.provablyfair.org/casino/duel/games/crash/overview. This overview consolidates the package documentation as of 4 October 2026. The machine-readable release identity is in [RELEASE-MANIFEST.json](RELEASE-MANIFEST.json), which is v1.2.1's; each earlier release's signed release identity is in the `RELEASE-MANIFEST.json` at that release's tag.
 
 ## Conclusion and scope
 
@@ -461,6 +461,7 @@ The HMAC-SHA256 implementation (hex key decoding), the commitment-per-round desi
 | `v1.0.0` | The audit as originally published, tagged on 17 September 2026. The tag points at public commit `7350abd` (14 September 2026), not at the 4 June 2026 publication `f97d5b8`: `7350abd` is that publication plus one commit, which bound the audited population to code and pinned the artifacts of record (Step 16, Artifact Integrity: 15 scored steps on 4 June, 16 at the tag). The dataset is byte-identical in both. | PROVABLY FAIR — Full Pass |
 | `v1.1.0` | Re-certification under Framework 1.1, October 2026, below. The dataset of record is unchanged. | unchanged |
 | `v1.2.0` | The RNG rebuilt from a written specification instead of ported from Duel's code; Duel's code kept as a second check (below, "20 October 2026"). Duel's 9,999.999× cash-out cap applied to the RTP table (below, "21 October 2026 — Duel's cash-out cap"); the cap's source named, a premises row added for it and its wording corrected (below, "21 October 2026 (second QA)"). | unchanged |
+| `v1.2.1` | Errata: adds `.gitattributes` (`* -text`) so a Windows git clone keeps every file byte-identical; no audit content changed. | unchanged |
 
 ### v1.1.0 — what changed
 
