@@ -14,7 +14,7 @@ const { readFileSync, writeFileSync, mkdirSync, existsSync } = require('fs');
  * premise (MANIFEST DL-2), not something this script measures.
  */
 
-const QUICKNET_GENESIS = 1692803367; // 2023-08-23T12:02:47Z
+const QUICKNET_GENESIS = 1692803367; // 2023-08-23T15:09:27Z
 const QUICKNET_PERIOD  = 3;          // seconds
 const DRAND_CHAIN_HASH = '52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971';
 const DRAND_API_BASE   = `https://api.drand.sh/${DRAND_CHAIN_HASH}/public`;

@@ -1,6 +1,6 @@
 # Duel Crash — Provably Fair Audit
 
-**Auditor:** [ProvablyFair.org](https://www.provablyfair.org) · **Audit ID:** PF-2026-DL05 · **Release:** `v1.2.1` · **Capture:** 14–15 April 2026
+**Auditor:** [ProvablyFair.org](https://www.provablyfair.org) · **Audit ID:** PF-2026-DL05 · **Release:** `v1.2.2` · **Capture:** 14–15 April 2026
 
 **Result: PROVABLY FAIR — Full Pass.** Every crash point in the 1,100-round dataset was reproduced by exact equality from the revealed server seed and the drand quicknet beacon. The verifier reports 18 of 18 scored steps passing, no flags and no hard failures. All 1,100 drand signatures equal the public beacon's records for their rounds.
 
