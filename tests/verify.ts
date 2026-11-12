@@ -64,7 +64,7 @@ const results: StepResult[] = [
   ...liveFit.run(ctx),       // Step  18
 ];
 
-// ── RTP-CLAIM rule (1.2.0, Methodology v1.1; 1.0.0 agreed on Slack 2026-09-29) ──
+// ── RTP-CLAIM rule (1.2.0, Methodology v1.1; 1.0.0 adopted 2026-09-29) ──
 // The per-setting exact RTP table held to the published claim (src/rtp-settings.ts). The package
 // switch RTP_CLAIM_RULE_ENFORCED is true (D3, 2026-10-14). Status OVERSTATED (a house-side miss) is
 // scored on the step carrying CRASH-19 as an operator-origin FLAG (the profile's policy) and the
@@ -114,10 +114,10 @@ const passed   = results.filter(r => r.status === 'PASS').length;
 const flags    = results.filter(r => r.status === 'FLAG').length;
 const hardFail = results.filter(r => r.status === 'FAIL').length;
 const total    = results.length;
-// INFO (profile policy INFORMATIONAL — the live-sample fit, Mike 2026-09-29): reported, never counted
+// INFO (profile policy INFORMATIONAL — the live-sample fit, since 2026-09-29): reported, never counted
 // as a flag, never enters the verdict or the exit code.
 const informational = results.filter(r => r.status === 'INFO').length;
-// One summary shape across the Duel packages (Mike 2026-09-28, F20). This package has no capture-origin
+// One summary shape across the Duel packages (since 2026-09-28). This package has no capture-origin
 // flag: every FLAG makes the verdict a Conditional Pass (below), so every flag is an operator flag.
 const captureFlags  = 0;
 const operatorFlags = flags - captureFlags;

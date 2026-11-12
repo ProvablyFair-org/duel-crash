@@ -63,7 +63,7 @@ export const DECLARED_EDGE_PERCENT = 0.1;
 // THE EXTENT OF THE EXACT RTP ENUMERATION (profile CRASH-08 / CRASH-19). Step 16 counts, at every 0.01
 // cash-out point from 1.01× up to this bound, the uint32 values whose crash point reaches it. Duel publishes
 // no maximum cash-out target and no cap on the crash point (the map's own maximum is 2^32 × 0.999 ≈
-// 4,290,672,328.70×); Duel cashes out every bet at 9,999.999× at most (Duel's statement as relayed by Mike in Slack on 21 October 2026: auto cash-out at 9999.999x),
+// 4,290,672,328.70×); Duel cashes out every bet at 9,999.999× at most (Duel's statement to ProvablyFair.org on 21 October 2026: auto cash-out at 9999.999x),
 // applied to the RTP table (src/rtp-settings.ts, OPERATOR_STATED_CASHOUT_CAP_MILLI). The
 // 2-dp grid to that maximum is ~4.3·10^11 points — not enumerable per verify run. 100,000× is the bound:
 // more than 7× the largest crash point this capture served (13,664.99×, round 831375 — see

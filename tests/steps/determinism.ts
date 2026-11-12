@@ -163,7 +163,7 @@ export function run(ctx: VerifyContext): StepResult[] {
 
     // ── Operator leg, a SECOND CHECK: THE OPERATOR'S OWN Verify-tab code (CRASH-09) ────────────────
     // src/rng.ts is rebuilt from docs/ALGORITHM.md, not from this file; this leg runs Duel's file as a
-    // second check. Duel's Crash code panel, pasted by Paulo from the Verify tab on 2026-09-26, vendored
+    // second check. Duel's Crash code panel, pasted by the auditor from the Verify tab on 2026-09-26, vendored
     // verbatim under evidence/verify-tab/ and pinned in src/operator-verifier.ts. The pinned runner fills in
     // the file's two "User input values" (drandSeed = the round's drandRandomness as captured, serverSeed)
     // and runs it, as a player would. Its validateCrashResult returns the UNFLOORED multiplier. Scored: its

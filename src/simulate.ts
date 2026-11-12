@@ -20,7 +20,7 @@ import * as crypto from 'crypto';
 import * as fs     from 'fs';
 import * as path   from 'path';
 
-// Pinned charts carry no CDN script (Mike 2026-09-28, F16): the library is inlined verbatim from the
+// Pinned charts carry no CDN script (since 2026-09-28): the library is inlined verbatim from the
 // chart.js devDependency (exact version, package-lock.json), so the artifact renders offline, forever,
 // and every byte it executes is inside the pinned file.
 const CHARTJS_SOURCE = fs.readFileSync(path.join(path.dirname(require.resolve('chart.js')), 'chart.umd.js'), 'utf8');

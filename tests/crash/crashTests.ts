@@ -150,7 +150,7 @@ describe('Statistics', () => {
 // is not asserted bit-identical; Step 5 reports that count as information.
 describe('Second check — Duel\'s own Crash Verify-tab code, executed with only its inputs filled in (pasted 2026-09-26)', function () {
   this.timeout(300_000);
-  // duel.com → Provably Fair → Verify (Crash) code panel, pasted by Paulo 2026-09-26, saved verbatim (src/operator-verifier.ts)
+  // duel.com → Provably Fair → Verify (Crash) code panel, pasted by the auditor 2026-09-26, saved verbatim (src/operator-verifier.ts)
   const { runOperatorVerifier, operatorCents, OPERATOR_VERIFIER_PINS, OPERATOR_VERIFIER_FILE, OPERATOR_EXPECTED_LOGS } =
     require('../../src/operator-verifier') as typeof import('../../src/operator-verifier');
   const data = require('../../data/crash-master-1100rounds.json') as { rounds: Array<{ roundId: number; result: { serverSeed: string; drandRandomness: string; crashPoint: number } }> };

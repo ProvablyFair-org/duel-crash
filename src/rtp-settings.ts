@@ -3,7 +3,7 @@
  *
  * The rule is src/rtp-claim.ts, a byte-identical copy of the framework's core/rtp-claim.ts (its
  * SHA-256 is compared by conformance C-13), version 1.2.0 (Methodology v1.1, agreed 2026-10-14;
- * 1.0.0 agreed on Slack 2026-09-29). The enforcement switch RTP_CLAIM_RULE_ENFORCED is the
+ * 1.0.0 adopted 2026-09-29). The enforcement switch RTP_CLAIM_RULE_ENFORCED is the
  * package's own src/rtp-claim-switch.ts, set to true (decision D3): the outcome is scored on the
  * step carrying CRASH-19, and a house-side miss makes the verdict RTP FIGURE OVERSTATED (exit 5),
  * never NOT PROVABLY FAIR. The claim names one of the rule's six places: the fairness page.
@@ -13,7 +13,7 @@
  * per-decade buckets, the true min and max rows and every house-side row up to RETAIN_ROWS; every
  * setting is still scored exactly.
  * CASH-OUT CAP (added 21 Oct 2026). Duel cashes out every bet at 9,999.999× at most, whatever target is
- * set (Duel's statement as relayed by Mike in Slack on 21 October 2026: auto cash-out at 9999.999x; no captured bet reached it). Applied here: a target t pays
+ * set (Duel's statement to ProvablyFair.org on 21 October 2026: auto cash-out at 9999.999x; no captured bet reached it). Applied here: a target t pays
  * min(t, CAP) and wins when the crash point reaches min(t, CAP). On the 0.01 target grid every target up
  * to 9,999.99× is below the cap and unchanged; every target from 10,000.00× up, including every target
  * above RTP_GRID_MAX, is scored at Duel's stated cap, so the row at any of them is RTP_CAP = count(CAP)·CAP/2^32.

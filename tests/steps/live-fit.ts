@@ -8,7 +8,7 @@
  * independent model, tests/steps/crash-model.ts) is fitted to uniform with a χ² on LIVE_FIT_BINS equal
  * bins, and its serial dependence tested in capture order (lag-1 z, Wald–Wolfowitz runs). A deviation
  * (χ² p < α, |lag-1 z| ≥ 3 or runs p < α) turns the step to INFO — never to FLAG or FAIL: profile policy
- * INFORMATIONAL (Mike 2026-09-29), reported, never counted, verdict unchanged. The measured statistics
+ * INFORMATIONAL (since 2026-09-29), reported, never counted, verdict unchanged. The measured statistics
  * live in `data`; the sentence states the bounds.
  */
 
